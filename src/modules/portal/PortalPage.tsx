@@ -15,6 +15,12 @@ interface NewTicket {
   slaHours: number
 }
 
+interface NewRequest {
+  title: string
+  type: string
+  priority: string
+}
+
 // Simula a visão que o cliente teria de seus dados (leitura, exceto abrir chamado/solicitação).
 export function PortalPage() {
   const [view, setView] = useState<ViewTab>('projetos')
@@ -25,7 +31,8 @@ export function PortalPage() {
   const finance = useQuery({ queryKey: ['finance'], queryFn: api.getFinance })
   const [newTicket, setNewTicket] = useState<NewTicket>({ subject: '', category: 'Portal', priority: 'media', slaHours: 24 })
   const [showTicketModal, setShowTicketModal] = useState(false)
-  const [newRequest, setNewRequest] = useState('')
+  const [newRequest, setNewRequest] = useState<NewRequest>({ title: '', type: 'Nova', priority: 'media' })
+  const [showRequestModal, setShowRequestModal] = useState(false)
   const queryClient = useQueryClient()
 
   if (projects.isLoading) return <Loading />
@@ -48,17 +55,18 @@ export function PortalPage() {
   }
 
   const openRequest = async () => {
-    if (!newRequest.trim()) return
+    if (!newRequest.title.trim()) return
     await createEntity('service-requests', {
       id: `sr-${Date.now()}`,
       client: PORTAL_CLIENT,
-      title: newRequest.trim(),
-      status: 'nova',
-      premissas: '',
+      title: newRequest.title.trim(),
+      status: newRequest.type,
+      premissas: newRequest.priority,
       createdAt: new Date().toISOString().slice(0, 10),
     })
     await queryClient.invalidateQueries({ queryKey: ['serviceRequests'] })
-    setNewRequest('')
+    setNewRequest({ title: '', type: 'Nova', priority: 'media' })
+    setShowRequestModal(false)
   }
 
   const clientProjects = (projects.data ?? []).filter((p) => p.client === PORTAL_CLIENT)
@@ -232,20 +240,66 @@ export function PortalPage() {
 
       {view === 'solicitacoes' && (
         <div>
-          <Card className="mb-4 flex items-center gap-2 p-3">
-            <input
-              value={newRequest}
-              onChange={(e) => setNewRequest(e.target.value)}
-              placeholder="Título da solicitação…"
-              className="flex-1 rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
-            />
+          <Card className="mb-4 p-3">
             <button
-              onClick={openRequest}
-              className="rounded-lg bg-indigo-500 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-600"
+              onClick={() => setShowRequestModal(true)}
+              className="w-full rounded-lg bg-indigo-500 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-600"
             >
               Abrir solicitação
             </button>
           </Card>
+          <Modal
+            open={showRequestModal}
+            onClose={() => setShowRequestModal(false)}
+            title="Nova solicitação"
+            footer={
+              <>
+                <button onClick={() => setShowRequestModal(false)} className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
+                  Cancelar
+                </button>
+                <button onClick={openRequest} className="rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-600">
+                  Criar
+                </button>
+              </>
+            }
+          >
+            <div className="space-y-3">
+              <input
+                value={newRequest.title}
+                onChange={(e) => setNewRequest({ ...newRequest, title: e.target.value })}
+                placeholder="Título da solicitação…"
+                className="w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                  Tipo
+                  <select
+                    value={newRequest.type}
+                    onChange={(e) => setNewRequest({ ...newRequest, type: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                  >
+                    <option value="nova">Nova</option>
+                    <option value="mudanca">Mudança</option>
+                    <option value="melhoria">Melhoria</option>
+                    <option value="integracao">Integração</option>
+                  </select>
+                </label>
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                  Prioridade
+                  <select
+                    value={newRequest.priority}
+                    onChange={(e) => setNewRequest({ ...newRequest, priority: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                  >
+                    <option value="baixa">Baixa</option>
+                    <option value="media">Média</option>
+                    <option value="alta">Alta</option>
+                    <option value="critica">Crítica</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+          </Modal>
           <TableWrap>
             <thead><tr><Th>Título</Th><Th>Status</Th><Th>Criada em</Th></tr></thead>
             <tbody>
