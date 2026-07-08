@@ -243,16 +243,6 @@ export interface WorklogEntry {
   description: string
 }
 
-export interface FileItem {
-  id: ID
-  name: string
-  ext: string
-  sizeKb: number
-  entity: string
-  uploadedBy: ID
-  date: string
-}
-
 export interface Tenant {
   id: ID
   name: string

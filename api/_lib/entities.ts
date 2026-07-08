@@ -20,7 +20,6 @@ export const ENTITIES: Record<string, string> = {
   capacity: 'capacity_rows',
   opportunities: 'opportunities',
   'service-requests': 'service_requests',
-  files: 'files',
   tasks: 'tasks',
   deliverables: 'deliverables',
   sprints: 'sprints',

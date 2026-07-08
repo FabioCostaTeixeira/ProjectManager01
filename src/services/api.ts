@@ -1,17 +1,28 @@
 import type {
   Alert, ApiToken, CapacityRow, Client, Closing, ConsumptionRow, Deliverable,
-  Demand, Dependency, Expertise, FileItem, FinanceRecord, Holiday, HourAdjustment,
+  Demand, Dependency, Expertise, FinanceRecord, Holiday, HourAdjustment,
   Insight, NoteCard, NoteColumn, Opportunity, Person, PlanningItem, Prepaid,
   Profile, Project, Reclassification, RecurringItem, Reminder, ReportRow,
   ServiceRequest, SlaPolicy, Sprint, Task, Team, Tenant, Ticket, TicketType,
   TimeEntry, User, Vacation, WorkSchedule, WorklogEntry,
 } from '../types'
 
+import { useAuthStore } from '../stores/authStore'
+
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = useAuthStore.getState().token
   const res = await fetch(`/api/${path}`, {
-    headers: init?.body ? { 'Content-Type': 'application/json' } : undefined,
     ...init,
+    headers: {
+      ...(init?.body ? { 'Content-Type': 'application/json' } : undefined),
+      ...(token ? { Authorization: `Bearer ${token}` } : undefined),
+    },
   })
+  if (res.status === 401) {
+    // Token ausente/expirado: derruba a sessão — o guard do AppLayout manda pro /login.
+    useAuthStore.getState().logout()
+    throw new Error('Sessão expirada')
+  }
   if (!res.ok) {
     const msg = await res.json().then((b) => b.error).catch(() => res.statusText)
     throw new Error(msg)
@@ -52,7 +63,6 @@ export const api = {
   getServiceRequests: list<ServiceRequest>('service-requests'),
   getReportRows: list<ReportRow>('report-rows'),
   getWorklog: list<WorklogEntry>('worklog'),
-  getFiles: list<FileItem>('files'),
   getTenants: list<Tenant>('tenants'),
   getApiTokens: list<ApiToken>('api-tokens'),
   getClients: list<Client>('clients'),

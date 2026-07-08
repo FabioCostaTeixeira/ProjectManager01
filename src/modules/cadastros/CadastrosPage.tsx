@@ -6,7 +6,7 @@ import { PageHeader, Badge, Avatar, TableWrap, Th, Td, Loading, Tabs, Modal } fr
 import { brl } from '../../lib/format'
 import { PERMISSIONS_CATALOG, PERMISSION_GROUPS, ALL_ACCESS } from '../../lib/permissions'
 import { usePermissionsStore } from '../../stores/permissionsStore'
-import type { Client, Profile, User } from '../../types'
+import type { Client, Expertise, Person, Profile, Team, User } from '../../types'
 
 const emptyProfile = (): Profile => ({
   id: `pf-${Date.now()}`,
@@ -35,6 +35,17 @@ const emptyClient = (): Client => ({
   recorrente: false,
 })
 
+const emptyExpertise = (): Expertise => ({ id: `ex-${Date.now()}`, name: '', valorHora: 0 })
+const emptyTeam = (): Team => ({ id: `tm-${Date.now()}`, name: '', members: 1 })
+const emptyPerson = (): Person => ({
+  id: `pe-${Date.now()}`,
+  name: '',
+  expertiseId: '',
+  valorHora: 0,
+  cargaSemanal: 40,
+  userId: null,
+})
+
 type Tab = 'usuarios' | 'clientes' | 'times' | 'expertises' | 'perfis' | 'pessoas'
 const tabs: { id: Tab; label: string }[] = [
   { id: 'usuarios', label: 'Usuários' },
@@ -59,6 +70,10 @@ export function CadastrosPage() {
   }, [profilesQ.data, setAll])
   const [editing, setEditing] = useState<Profile | null>(null)
   const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [userPassword, setUserPassword] = useState('')
+  const [editingExpertise, setEditingExpertise] = useState<Expertise | null>(null)
+  const [editingTeam, setEditingTeam] = useState<Team | null>(null)
+  const [editingPerson, setEditingPerson] = useState<Person | null>(null)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const queryClient = useQueryClient()
   if (users.isLoading) return <Loading />
@@ -67,10 +82,13 @@ export function CadastrosPage() {
 
   const saveUser = async () => {
     if (!editingUser?.name.trim() || !editingUser.email.trim()) return
-    if (isNew(users.data, editingUser.id)) await createEntity('users', editingUser)
-    else await updateEntity('users', editingUser.id, editingUser)
+    // Senha opcional: se preenchida, o backend faz o hash (bcrypt) antes de gravar.
+    const body = userPassword ? { ...editingUser, password: userPassword } : editingUser
+    if (isNew(users.data, editingUser.id)) await createEntity('users', body)
+    else await updateEntity('users', editingUser.id, body)
     await queryClient.invalidateQueries({ queryKey: ['users'] })
     setEditingUser(null)
+    setUserPassword('')
   }
   const deleteUser = async (id: string) => {
     await removeEntity('users', id)
@@ -87,6 +105,39 @@ export function CadastrosPage() {
     await removeEntity('clients', id)
     await queryClient.invalidateQueries({ queryKey: ['clients'] })
   }
+  const saveExpertise = async () => {
+    if (!editingExpertise?.name.trim()) return
+    if (isNew(expertises.data, editingExpertise.id)) await createEntity('expertises', editingExpertise)
+    else await updateEntity('expertises', editingExpertise.id, editingExpertise)
+    await queryClient.invalidateQueries({ queryKey: ['expertises'] })
+    setEditingExpertise(null)
+  }
+  const deleteExpertise = async (id: string) => {
+    await removeEntity('expertises', id)
+    await queryClient.invalidateQueries({ queryKey: ['expertises'] })
+  }
+  const saveTeam = async () => {
+    if (!editingTeam?.name.trim()) return
+    if (isNew(teams.data, editingTeam.id)) await createEntity('teams', editingTeam)
+    else await updateEntity('teams', editingTeam.id, editingTeam)
+    await queryClient.invalidateQueries({ queryKey: ['teams'] })
+    setEditingTeam(null)
+  }
+  const deleteTeam = async (id: string) => {
+    await removeEntity('teams', id)
+    await queryClient.invalidateQueries({ queryKey: ['teams'] })
+  }
+  const savePerson = async () => {
+    if (!editingPerson?.name.trim() || !editingPerson.expertiseId) return
+    if (isNew(people.data, editingPerson.id)) await createEntity('people', editingPerson)
+    else await updateEntity('people', editingPerson.id, editingPerson)
+    await queryClient.invalidateQueries({ queryKey: ['people'] })
+    setEditingPerson(null)
+  }
+  const deletePerson = async (id: string) => {
+    await removeEntity('people', id)
+    await queryClient.invalidateQueries({ queryKey: ['people'] })
+  }
 
   const expertiseOf = (id: string) => expertises.data?.find((e) => e.id === id)?.name ?? '—'
   const userOf = (id: string | null) => users.data?.find((u) => u.id === id)
@@ -102,6 +153,15 @@ export function CadastrosPage() {
     setEditing({ ...editing, permissions: has ? editing.permissions.filter((p) => p !== key) : [...editing.permissions, key] })
   }
   const allAccess = editing?.permissions.includes(ALL_ACCESS) ?? false
+  // Check do grupo: marca/desmarca todas as páginas do grupo de uma vez.
+  const groupKeys = (group: string) => PERMISSIONS_CATALOG.filter((p) => p.group === group).map((p) => p.key)
+  const groupChecked = (group: string) => groupKeys(group).every((k) => editing?.permissions.includes(k))
+  const toggleGroup = (group: string) => {
+    if (!editing) return
+    const keys = groupKeys(group)
+    const rest = editing.permissions.filter((k) => !keys.includes(k))
+    setEditing({ ...editing, permissions: groupChecked(group) ? rest : [...rest, ...keys] })
+  }
 
   return (
     <div>
@@ -182,12 +242,20 @@ export function CadastrosPage() {
                   type="email"
                   className="w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
                 />
-                <input
+                <select
                   value={editingUser.role}
                   onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
-                  placeholder="Papel (ex. Gestor de Projetos)"
                   className="w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
-                />
+                >
+                  <option value="">Papel / cargo…</option>
+                  {/* Papel puxa da aba Expertises; papel antigo fora da lista continua selecionável */}
+                  {editingUser.role && !(expertises.data ?? []).some((x) => x.name === editingUser.role) && (
+                    <option value={editingUser.role}>{editingUser.role}</option>
+                  )}
+                  {(expertises.data ?? []).map((x) => (
+                    <option key={x.id} value={x.name}>{x.name}</option>
+                  ))}
+                </select>
                 <select
                   value={editingUser.profileId ?? ''}
                   onChange={(e) => setEditingUser({ ...editingUser, profileId: e.target.value || null })}
@@ -196,6 +264,13 @@ export function CadastrosPage() {
                   <option value="">Sem perfil</option>
                   {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
+                <input
+                  value={userPassword}
+                  onChange={(e) => setUserPassword(e.target.value)}
+                  placeholder={isNew(users.data, editingUser.id) ? 'Senha de acesso' : 'Nova senha (deixe vazio para manter)'}
+                  type="password"
+                  className="w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                />
               </div>
             )}
           </Modal>
@@ -303,31 +378,137 @@ export function CadastrosPage() {
       )}
 
       {tab === 'times' && (
-        <TableWrap>
-          <thead><tr><Th>Time</Th><Th>Membros</Th></tr></thead>
-          <tbody>
-            {(teams.data ?? []).map((t) => (
-              <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                <Td className="font-medium text-slate-900 dark:text-white">{t.name}</Td>
-                <Td>{t.members}</Td>
-              </tr>
-            ))}
-          </tbody>
-        </TableWrap>
+        <div>
+          <div className="mb-3 flex justify-end">
+            <button
+              onClick={() => setEditingTeam(emptyTeam())}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-600"
+            >
+              <Plus size={15} /> Novo time
+            </button>
+          </div>
+          <TableWrap>
+            <thead><tr><Th>Time</Th><Th>Membros</Th><Th>Ações</Th></tr></thead>
+            <tbody>
+              {(teams.data ?? []).map((t) => (
+                <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <Td className="font-medium text-slate-900 dark:text-white">{t.name}</Td>
+                  <Td>{t.members}</Td>
+                  <Td>
+                    <div className="flex gap-1">
+                      <button onClick={() => setEditingTeam({ ...t })} title="Editar" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-indigo-500 dark:hover:bg-slate-800">
+                        <Pencil size={15} />
+                      </button>
+                      <button onClick={() => deleteTeam(t.id)} title="Excluir" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-500 dark:hover:bg-slate-800">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </TableWrap>
+
+          <Modal
+            open={editingTeam !== null}
+            onClose={() => setEditingTeam(null)}
+            title={editingTeam && !isNew(teams.data, editingTeam.id) ? 'Editar time' : 'Novo time'}
+            footer={
+              <>
+                <button onClick={() => setEditingTeam(null)} className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
+                <button onClick={saveTeam} className="rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-600">Salvar</button>
+              </>
+            }
+          >
+            {editingTeam && (
+              <div className="space-y-3">
+                <input
+                  value={editingTeam.name}
+                  onChange={(e) => setEditingTeam({ ...editingTeam, name: e.target.value })}
+                  placeholder="Nome do time"
+                  className="w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                />
+                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">
+                  Membros
+                  <input
+                    type="number"
+                    min="1"
+                    value={editingTeam.members}
+                    onChange={(e) => setEditingTeam({ ...editingTeam, members: Number(e.target.value) })}
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                  />
+                </label>
+              </div>
+            )}
+          </Modal>
+        </div>
       )}
 
       {tab === 'expertises' && (
-        <TableWrap>
-          <thead><tr><Th>Expertise</Th><Th>Valor/hora</Th></tr></thead>
-          <tbody>
-            {(expertises.data ?? []).map((e) => (
-              <tr key={e.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                <Td className="font-medium text-slate-900 dark:text-white">{e.name}</Td>
-                <Td>{brl(e.valorHora)}</Td>
-              </tr>
-            ))}
-          </tbody>
-        </TableWrap>
+        <div>
+          <div className="mb-3 flex justify-end">
+            <button
+              onClick={() => setEditingExpertise(emptyExpertise())}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-600"
+            >
+              <Plus size={15} /> Nova expertise
+            </button>
+          </div>
+          <TableWrap>
+            <thead><tr><Th>Expertise / Cargo</Th><Th>Valor/hora</Th><Th>Ações</Th></tr></thead>
+            <tbody>
+              {(expertises.data ?? []).map((e) => (
+                <tr key={e.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                  <Td className="font-medium text-slate-900 dark:text-white">{e.name}</Td>
+                  <Td>{brl(e.valorHora)}</Td>
+                  <Td>
+                    <div className="flex gap-1">
+                      <button onClick={() => setEditingExpertise({ ...e })} title="Editar" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-indigo-500 dark:hover:bg-slate-800">
+                        <Pencil size={15} />
+                      </button>
+                      <button onClick={() => deleteExpertise(e.id)} title="Excluir" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-500 dark:hover:bg-slate-800">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </TableWrap>
+
+          <Modal
+            open={editingExpertise !== null}
+            onClose={() => setEditingExpertise(null)}
+            title={editingExpertise && !isNew(expertises.data, editingExpertise.id) ? 'Editar expertise' : 'Nova expertise'}
+            footer={
+              <>
+                <button onClick={() => setEditingExpertise(null)} className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
+                <button onClick={saveExpertise} className="rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-600">Salvar</button>
+              </>
+            }
+          >
+            {editingExpertise && (
+              <div className="space-y-3">
+                <input
+                  value={editingExpertise.name}
+                  onChange={(e) => setEditingExpertise({ ...editingExpertise, name: e.target.value })}
+                  placeholder="Função / cargo (ex. Desenvolvedor Sênior)"
+                  className="w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                />
+                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">
+                  Valor/hora (R$)
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingExpertise.valorHora}
+                    onChange={(e) => setEditingExpertise({ ...editingExpertise, valorHora: Number(e.target.value) })}
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                  />
+                </label>
+              </div>
+            )}
+          </Modal>
+        </div>
       )}
 
       {tab === 'perfis' && (
@@ -422,8 +603,17 @@ export function CadastrosPage() {
 
                 {PERMISSION_GROUPS.map((group) => (
                   <div key={group}>
-                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{group}</p>
-                    <div className="grid grid-cols-2 gap-1">
+                    <label className={allAccess ? 'mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-300 dark:text-slate-600' : 'mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300'}>
+                      <input
+                        type="checkbox"
+                        disabled={allAccess}
+                        checked={allAccess || groupChecked(group)}
+                        onChange={() => toggleGroup(group)}
+                        className="h-4 w-4 rounded border-slate-300"
+                      />
+                      {group}
+                    </label>
+                    <div className="grid grid-cols-2 gap-1 pl-6">
                       {PERMISSIONS_CATALOG.filter((p) => p.group === group).map((p) => (
                         <label key={p.key} className={allAccess ? 'flex items-center gap-2 text-sm text-slate-300 dark:text-slate-600' : 'flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300'}>
                           <input
@@ -446,29 +636,120 @@ export function CadastrosPage() {
       )}
 
       {tab === 'pessoas' && (
-        <TableWrap>
-          <thead><tr><Th>Nome</Th><Th>Expertise</Th><Th>Valor/hora</Th><Th>Carga semanal</Th><Th>Usuário vinculado</Th></tr></thead>
-          <tbody>
-            {(people.data ?? []).map((p) => {
-              const u = userOf(p.userId)
-              return (
-                <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                  <Td className="font-medium text-slate-900 dark:text-white">{p.name}</Td>
-                  <Td>{expertiseOf(p.expertiseId)}</Td>
-                  <Td>{brl(p.valorHora)}</Td>
-                  <Td>{p.cargaSemanal}h</Td>
-                  <Td>
-                    {u ? (
-                      <span className="flex items-center gap-2"><Avatar name={u.name} color={u.color} size={22} /> {u.name}</span>
-                    ) : (
-                      <span className="text-xs text-slate-400">Sem usuário (terceiro)</span>
-                    )}
-                  </Td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </TableWrap>
+        <div>
+          <div className="mb-3 flex justify-end">
+            <button
+              onClick={() => setEditingPerson(emptyPerson())}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-600"
+            >
+              <Plus size={15} /> Nova pessoa
+            </button>
+          </div>
+          <TableWrap>
+            <thead><tr><Th>Nome</Th><Th>Expertise</Th><Th>Valor/hora</Th><Th>Carga semanal</Th><Th>Usuário vinculado</Th><Th>Ações</Th></tr></thead>
+            <tbody>
+              {(people.data ?? []).map((p) => {
+                const u = userOf(p.userId)
+                // Sem tarifa individual (0) → herda o valor/hora da expertise.
+                const rate = p.valorHora || (expertises.data?.find((e) => e.id === p.expertiseId)?.valorHora ?? 0)
+                return (
+                  <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <Td className="font-medium text-slate-900 dark:text-white">{p.name}</Td>
+                    <Td>{expertiseOf(p.expertiseId)}</Td>
+                    <Td>
+                      {brl(rate)}
+                      {!p.valorHora && rate > 0 && <span className="ml-1 text-[10px] text-slate-400">(da expertise)</span>}
+                    </Td>
+                    <Td>{p.cargaSemanal}h</Td>
+                    <Td>
+                      {u ? (
+                        <span className="flex items-center gap-2"><Avatar name={u.name} color={u.color} size={22} /> {u.name}</span>
+                      ) : (
+                        <span className="text-xs text-slate-400">Sem usuário (terceiro)</span>
+                      )}
+                    </Td>
+                    <Td>
+                      <div className="flex gap-1">
+                        <button onClick={() => setEditingPerson({ ...p })} title="Editar" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-indigo-500 dark:hover:bg-slate-800">
+                          <Pencil size={15} />
+                        </button>
+                        <button onClick={() => deletePerson(p.id)} title="Excluir" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-500 dark:hover:bg-slate-800">
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </Td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </TableWrap>
+
+          <Modal
+            open={editingPerson !== null}
+            onClose={() => setEditingPerson(null)}
+            title={editingPerson && !isNew(people.data, editingPerson.id) ? 'Editar pessoa' : 'Nova pessoa'}
+            footer={
+              <>
+                <button onClick={() => setEditingPerson(null)} className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">Cancelar</button>
+                <button onClick={savePerson} className="rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-600">Salvar</button>
+              </>
+            }
+          >
+            {editingPerson && (
+              <div className="space-y-3">
+                <input
+                  value={editingPerson.name}
+                  onChange={(e) => setEditingPerson({ ...editingPerson, name: e.target.value })}
+                  placeholder="Nome completo"
+                  className="w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                />
+                <select
+                  value={editingPerson.expertiseId}
+                  onChange={(e) => setEditingPerson({ ...editingPerson, expertiseId: e.target.value })}
+                  className="w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                >
+                  <option value="">Expertise…</option>
+                  {(expertises.data ?? []).map((x) => (
+                    <option key={x.id} value={x.id}>{x.name}</option>
+                  ))}
+                </select>
+                <div className="flex gap-3">
+                  <label className="flex-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+                    Valor/hora individual (R$) — 0 herda da expertise
+                    <input
+                      type="number"
+                      min="0"
+                      value={editingPerson.valorHora}
+                      onChange={(e) => setEditingPerson({ ...editingPerson, valorHora: Number(e.target.value) })}
+                      className="mt-1 w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                    />
+                  </label>
+                  <label className="flex-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+                    Carga semanal (h)
+                    <input
+                      type="number"
+                      min="1"
+                      max="60"
+                      value={editingPerson.cargaSemanal}
+                      onChange={(e) => setEditingPerson({ ...editingPerson, cargaSemanal: Number(e.target.value) })}
+                      className="mt-1 w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                    />
+                  </label>
+                </div>
+                <select
+                  value={editingPerson.userId ?? ''}
+                  onChange={(e) => setEditingPerson({ ...editingPerson, userId: e.target.value || null })}
+                  className="w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                >
+                  <option value="">Sem usuário (terceiro)</option>
+                  {(users.data ?? []).map((u) => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </Modal>
+        </div>
       )}
     </div>
   )

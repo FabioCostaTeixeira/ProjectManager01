@@ -47,7 +47,8 @@ CREATE TABLE users (
   email text NOT NULL,
   role text NOT NULL,
   color text NOT NULL,
-  profile_id text REFERENCES profiles(id) ON DELETE SET NULL
+  profile_id text REFERENCES profiles(id) ON DELETE SET NULL,
+  password_hash text
 );
 
 CREATE TABLE clients (
@@ -172,16 +173,6 @@ CREATE TABLE service_requests (
   status request_status NOT NULL,
   premissas text NOT NULL DEFAULT '',
   created_at date NOT NULL
-);
-
-CREATE TABLE files (
-  id text PRIMARY KEY,
-  name text NOT NULL,
-  ext text NOT NULL,
-  size_kb integer NOT NULL,
-  entity text NOT NULL,
-  uploaded_by text NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-  date date NOT NULL
 );
 
 -- ---- Dependem de projects/users ----

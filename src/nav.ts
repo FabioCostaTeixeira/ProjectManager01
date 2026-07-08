@@ -21,7 +21,6 @@ import {
   BarChart3,
   Globe,
   Sparkles,
-  Files,
   Contact,
   Building2,
   KeyRound,
@@ -67,7 +66,6 @@ export const navItems: NavItem[] = [
   { to: '/portal', label: 'Portal do Cliente', icon: Globe, group: 'cliente' },
 
   { to: '/ia', label: 'IA / Insights', icon: Sparkles, group: 'sistema' },
-  { to: '/arquivos', label: 'Arquivos', icon: Files, group: 'sistema' },
   { to: '/cadastros', label: 'Cadastros', icon: Contact, group: 'sistema' },
   { to: '/admin', label: 'Admin / Tenants', icon: Building2, group: 'sistema' },
   { to: '/meus-tokens', label: 'Tokens', icon: KeyRound, group: 'sistema' },

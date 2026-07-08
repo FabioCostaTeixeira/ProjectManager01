@@ -1,26 +1,23 @@
-// Catálogo fixo de permissões do sistema. Perfis marcam chaves daqui;
-// a chave especial 'tudo' representa acesso total (Gestor Geral).
-export interface PermissionDef {
-  key: string
-  label: string
-  group: string
-}
+import { navItems, groupLabels, navGroups } from '../nav'
+
+export interface PermissionDef { key: string; label: string; group: string }
 
 export const ALL_ACCESS = 'tudo'
 
-export const PERMISSIONS_CATALOG: PermissionDef[] = [
-  { key: 'projetos:read', label: 'Ver projetos', group: 'Projetos' },
-  { key: 'projetos:write', label: 'Editar projetos', group: 'Projetos' },
-  { key: 'financeiro:read', label: 'Ver financeiro', group: 'Financeiro' },
-  { key: 'financeiro:write', label: 'Editar financeiro', group: 'Financeiro' },
-  { key: 'capacidade:read', label: 'Ver capacidade', group: 'Capacidade' },
-  { key: 'capacidade:write', label: 'Gerir jornadas/férias', group: 'Capacidade' },
-  { key: 'tarefas:read', label: 'Ver tarefas', group: 'Tarefas' },
-  { key: 'tarefas:write', label: 'Editar tarefas', group: 'Tarefas' },
-  { key: 'apontamentos:read', label: 'Ver apontamentos', group: 'Apontamentos' },
-  { key: 'apontamentos:write', label: 'Lançar apontamentos', group: 'Apontamentos' },
-  { key: 'admin:read', label: 'Ver administração', group: 'Admin' },
-  { key: 'admin:write', label: 'Gerir tenants/cadastros', group: 'Admin' },
-]
+// Catálogo derivado do menu: uma permissão por página, agrupada como na sidebar.
+// Marcar o grupo inteiro = todas as páginas do grupo; granular = página a página.
+export const PERMISSIONS_CATALOG: PermissionDef[] = navItems.map((i) => ({
+  key: `page:${i.to}`,
+  label: i.label,
+  group: groupLabels[i.group],
+}))
 
-export const PERMISSION_GROUPS = Array.from(new Set(PERMISSIONS_CATALOG.map((p) => p.group)))
+export const PERMISSION_GROUPS = navGroups.map((g) => groupLabels[g])
+
+export const pageKey = (path: string) => `page:${path}`
+
+// Sem perfil (permissions undefined) = acesso liberado (compatibilidade).
+export function canAccess(permissions: string[] | undefined, path: string): boolean {
+  if (!permissions) return true
+  return permissions.includes(ALL_ACCESS) || permissions.includes(pageKey(path))
+}

@@ -123,7 +123,6 @@ import type {
   ServiceRequest,
   ReportRow,
   WorklogEntry,
-  FileItem,
   Tenant,
   ApiToken,
   Client,
@@ -209,14 +208,6 @@ export const worklog: WorklogEntry[] = [
   { id: 'w3', userId: 'u3', projectId: null, date: '2026-07-03', hours: 2, kind: 'avulso', description: 'Reunião interna de design' },
   { id: 'w4', userId: 'u5', projectId: 'p3', date: '2026-07-02', hours: 5, kind: 'projeto', description: 'Modelagem' },
   { id: 'w5', userId: 'u6', projectId: null, date: '2026-07-02', hours: 1, kind: 'avulso', description: 'Treinamento QA' },
-]
-
-export const files: FileItem[] = [
-  { id: 'a1', name: 'Proposta_Portal_v1', ext: 'pdf', sizeKb: 842, entity: 'Projeto: Portal do Cliente', uploadedBy: 'u1', date: '2026-06-20' },
-  { id: 'a2', name: 'Wireframes_App', ext: 'fig', sizeKb: 12400, entity: 'Projeto: App Mobile', uploadedBy: 'u3', date: '2026-06-22' },
-  { id: 'a3', name: 'Modelo_Dados_DataLake', ext: 'xlsx', sizeKb: 356, entity: 'Projeto: Data Lake', uploadedBy: 'u5', date: '2026-06-28' },
-  { id: 'a4', name: 'Contrato_VerdeModa', ext: 'pdf', sizeKb: 640, entity: 'Cliente: Verde Moda', uploadedBy: 'u1', date: '2026-05-10' },
-  { id: 'a5', name: 'Export_faturas_junho', ext: 'csv', sizeKb: 88, entity: 'Financeiro', uploadedBy: 'u2', date: '2026-07-01' },
 ]
 
 export const tenants: Tenant[] = [

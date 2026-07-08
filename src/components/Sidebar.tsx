@@ -2,12 +2,14 @@ import { NavLink } from 'react-router-dom'
 import { LayoutGrid } from 'lucide-react'
 import { navItems, groupLabels, navGroups } from '../nav'
 import { useUIStore } from '../stores/uiStore'
+import { useAccess } from '../lib/useAccess'
 import { cn } from './ui'
 
 const groups = navGroups
 
 export function Sidebar() {
   const collapsed = useUIStore((s) => s.sidebarCollapsed)
+  const allowed = useAccess()
 
   return (
     <aside
@@ -26,15 +28,17 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 pb-4">
-        {groups.map((g) => (
+        {groups.map((g) => {
+          const visible = navItems.filter((i) => i.group === g && allowed(i.to))
+          if (visible.length === 0) return null
+          return (
           <div key={g} className="mt-4">
             {!collapsed && (
               <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                 {groupLabels[g]}
               </p>
             )}
-            {navItems
-              .filter((i) => i.group === g)
+            {visible
               .map((item) => {
                 const Icon = item.icon
                 return (
@@ -58,7 +62,8 @@ export function Sidebar() {
                 )
               })}
           </div>
-        ))}
+          )
+        })}
       </nav>
     </aside>
   )
