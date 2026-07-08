@@ -621,11 +621,16 @@ export function CadastrosPage() {
           <tbody>
             {(people.data ?? []).map((p) => {
               const u = userOf(p.userId)
+              // Sem tarifa individual (0) → herda o valor/hora da expertise.
+              const rate = p.valorHora || (expertises.data?.find((e) => e.id === p.expertiseId)?.valorHora ?? 0)
               return (
                 <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                   <Td className="font-medium text-slate-900 dark:text-white">{p.name}</Td>
                   <Td>{expertiseOf(p.expertiseId)}</Td>
-                  <Td>{brl(p.valorHora)}</Td>
+                  <Td>
+                    {brl(rate)}
+                    {!p.valorHora && rate > 0 && <span className="ml-1 text-[10px] text-slate-400">(da expertise)</span>}
+                  </Td>
                   <Td>{p.cargaSemanal}h</Td>
                   <Td>
                     {u ? (
