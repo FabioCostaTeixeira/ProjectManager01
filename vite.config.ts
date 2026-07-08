@@ -29,7 +29,10 @@ function localApi(): Plugin {
               return vres
             },
           })
-          const mod = await server.ssrLoadModule(id ? '/api/[entity]/[id].ts' : '/api/[entity].ts')
+          // Rotas estáticas (ex. login.ts) têm precedência sobre as dinâmicas, como no Vercel.
+          const modPath =
+            entity === 'login' ? '/api/login.ts' : id ? '/api/[entity]/[id].ts' : '/api/[entity].ts'
+          const mod = await server.ssrLoadModule(modPath)
           await mod.default(vreq, vres)
         })().catch((e) => {
           res.statusCode = 500

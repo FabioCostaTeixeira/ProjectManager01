@@ -47,7 +47,8 @@ CREATE TABLE users (
   email text NOT NULL,
   role text NOT NULL,
   color text NOT NULL,
-  profile_id text REFERENCES profiles(id) ON DELETE SET NULL
+  profile_id text REFERENCES profiles(id) ON DELETE SET NULL,
+  password_hash text
 );
 
 CREATE TABLE clients (

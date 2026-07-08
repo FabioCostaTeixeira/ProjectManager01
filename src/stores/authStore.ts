@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import type { User } from '../types'
 
 export interface SessionUser {
   name: string
@@ -9,20 +10,35 @@ export interface SessionUser {
 
 interface AuthState {
   user: SessionUser | null
-  login: (email: string, workspace: string) => void
+  token: string | null
+  login: (email: string, password: string, workspace: string) => Promise<void>
   logout: () => void
 }
 
-// Auth 100% local/fake — nenhuma chamada externa. Só para simular o fluxo.
+// Auth real: POST /api/login valida contra o banco e retorna token HMAC.
+// fetch direto (não services/api.ts) para evitar import circular — api.ts lê o token daqui.
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
-      login: (email, workspace) => {
-        const name = email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-        set({ user: { name: name || 'Usuário', email, workspace: workspace || 'Meu Workspace' } })
+      token: null,
+      login: async (email, password, workspace) => {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        })
+        if (!res.ok) {
+          const msg = await res.json().then((b) => b.error).catch(() => 'Falha no login')
+          throw new Error(msg)
+        }
+        const { user, token } = (await res.json()) as { user: User; token: string }
+        set({
+          user: { name: user.name, email: user.email, workspace: workspace || 'Meu Workspace' },
+          token,
+        })
       },
-      logout: () => set({ user: null }),
+      logout: () => set({ user: null, token: null }),
     }),
     { name: 'gp-auth' },
   ),

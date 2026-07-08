@@ -59,6 +59,7 @@ export function CadastrosPage() {
   }, [profilesQ.data, setAll])
   const [editing, setEditing] = useState<Profile | null>(null)
   const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [userPassword, setUserPassword] = useState('')
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const queryClient = useQueryClient()
   if (users.isLoading) return <Loading />
@@ -67,10 +68,13 @@ export function CadastrosPage() {
 
   const saveUser = async () => {
     if (!editingUser?.name.trim() || !editingUser.email.trim()) return
-    if (isNew(users.data, editingUser.id)) await createEntity('users', editingUser)
-    else await updateEntity('users', editingUser.id, editingUser)
+    // Senha opcional: se preenchida, o backend faz o hash (bcrypt) antes de gravar.
+    const body = userPassword ? { ...editingUser, password: userPassword } : editingUser
+    if (isNew(users.data, editingUser.id)) await createEntity('users', body)
+    else await updateEntity('users', editingUser.id, body)
     await queryClient.invalidateQueries({ queryKey: ['users'] })
     setEditingUser(null)
+    setUserPassword('')
   }
   const deleteUser = async (id: string) => {
     await removeEntity('users', id)
@@ -196,6 +200,13 @@ export function CadastrosPage() {
                   <option value="">Sem perfil</option>
                   {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
+                <input
+                  value={userPassword}
+                  onChange={(e) => setUserPassword(e.target.value)}
+                  placeholder={isNew(users.data, editingUser.id) ? 'Senha de acesso' : 'Nova senha (deixe vazio para manter)'}
+                  type="password"
+                  className="w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                />
               </div>
             )}
           </Modal>

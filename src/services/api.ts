@@ -7,11 +7,22 @@ import type {
   TimeEntry, User, Vacation, WorkSchedule, WorklogEntry,
 } from '../types'
 
+import { useAuthStore } from '../stores/authStore'
+
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = useAuthStore.getState().token
   const res = await fetch(`/api/${path}`, {
-    headers: init?.body ? { 'Content-Type': 'application/json' } : undefined,
     ...init,
+    headers: {
+      ...(init?.body ? { 'Content-Type': 'application/json' } : undefined),
+      ...(token ? { Authorization: `Bearer ${token}` } : undefined),
+    },
   })
+  if (res.status === 401) {
+    // Token ausente/expirado: derruba a sessão — o guard do AppLayout manda pro /login.
+    useAuthStore.getState().logout()
+    throw new Error('Sessão expirada')
+  }
   if (!res.ok) {
     const msg = await res.json().then((b) => b.error).catch(() => res.statusText)
     throw new Error(msg)
