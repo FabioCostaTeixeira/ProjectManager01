@@ -175,16 +175,6 @@ CREATE TABLE service_requests (
   created_at date NOT NULL
 );
 
-CREATE TABLE files (
-  id text PRIMARY KEY,
-  name text NOT NULL,
-  ext text NOT NULL,
-  size_kb integer NOT NULL,
-  entity text NOT NULL,
-  uploaded_by text NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-  date date NOT NULL
-);
-
 -- ---- Dependem de projects/users ----
 
 CREATE TABLE tasks (

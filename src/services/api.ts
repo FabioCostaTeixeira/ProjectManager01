@@ -1,6 +1,6 @@
 import type {
   Alert, ApiToken, CapacityRow, Client, Closing, ConsumptionRow, Deliverable,
-  Demand, Dependency, Expertise, FileItem, FinanceRecord, Holiday, HourAdjustment,
+  Demand, Dependency, Expertise, FinanceRecord, Holiday, HourAdjustment,
   Insight, NoteCard, NoteColumn, Opportunity, Person, PlanningItem, Prepaid,
   Profile, Project, Reclassification, RecurringItem, Reminder, ReportRow,
   ServiceRequest, SlaPolicy, Sprint, Task, Team, Tenant, Ticket, TicketType,
@@ -63,7 +63,6 @@ export const api = {
   getServiceRequests: list<ServiceRequest>('service-requests'),
   getReportRows: list<ReportRow>('report-rows'),
   getWorklog: list<WorklogEntry>('worklog'),
-  getFiles: list<FileItem>('files'),
   getTenants: list<Tenant>('tenants'),
   getApiTokens: list<ApiToken>('api-tokens'),
   getClients: list<Client>('clients'),

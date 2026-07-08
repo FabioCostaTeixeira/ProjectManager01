@@ -27,7 +27,6 @@ import { FechamentoPage } from './modules/fechamento/FechamentoPage'
 import { PrepagoPage } from './modules/prepago/PrepagoPage'
 import { PortfolioPage } from './modules/portfolio/PortfolioPage'
 import { RelatoriosPage } from './modules/relatorios/RelatoriosPage'
-import { ArquivosPage } from './modules/arquivos/ArquivosPage'
 import { CadastrosPage } from './modules/cadastros/CadastrosPage'
 import { AdminPage } from './modules/admin/AdminPage'
 import { TokensPage } from './modules/tokens/TokensPage'
@@ -64,7 +63,6 @@ export default function App() {
           <Route path="/relatorios" element={<RelatoriosPage />} />
           <Route path="/portal" element={<PortalPage />} />
           <Route path="/ia" element={<IAPage />} />
-          <Route path="/arquivos" element={<ArquivosPage />} />
           <Route path="/cadastros" element={<CadastrosPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/meus-tokens" element={<TokensPage />} />

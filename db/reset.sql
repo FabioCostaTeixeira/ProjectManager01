@@ -6,7 +6,7 @@ TRUNCATE
   profiles, users, clients, teams, expertises, tenants, api_tokens,
   ticket_types, sla_policies, holidays, note_columns, note_cards,
   projects, people, work_schedules, vacations, capacity_rows,
-  opportunities, service_requests, files, tasks, deliverables, sprints,
+  opportunities, service_requests, tasks, deliverables, sprints,
   time_entries, finance_records, planning_items, report_rows,
   consumption_rows, hour_adjustments, reclassifications, worklog_entries,
   reminders, closings, prepaids, recurring_items, demands, tickets,
