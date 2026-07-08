@@ -3,9 +3,11 @@ import { persist } from 'zustand/middleware'
 import type { User } from '../types'
 
 export interface SessionUser {
+  id: string
   name: string
   email: string
   workspace: string
+  profileId: string | null
 }
 
 interface AuthState {
@@ -34,7 +36,13 @@ export const useAuthStore = create<AuthState>()(
         }
         const { user, token } = (await res.json()) as { user: User; token: string }
         set({
-          user: { name: user.name, email: user.email, workspace: workspace || 'Meu Workspace' },
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            workspace: workspace || 'Meu Workspace',
+            profileId: user.profileId,
+          },
           token,
         })
       },
