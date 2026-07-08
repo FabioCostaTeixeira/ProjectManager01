@@ -2,11 +2,18 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Globe, ExternalLink } from 'lucide-react'
 import { api, createEntity } from '../../services/api'
-import { Card, PageHeader, Badge, ProgressBar, StatTile, Loading, Tabs, TableWrap, Th, Td } from '../../components/ui'
+import { Card, PageHeader, Badge, ProgressBar, StatTile, Loading, Tabs, TableWrap, Th, Td, Modal } from '../../components/ui'
 import { projectStatusBadge, ticketBadge, requestBadge, financeBadge, brl, dateBR } from '../../lib/format'
 
 type ViewTab = 'projetos' | 'chamados' | 'solicitacoes' | 'relatorio' | 'financeiro'
 const PORTAL_CLIENT = 'Acme Corp'
+
+interface NewTicket {
+  subject: string
+  category: string
+  priority: string
+  slaHours: number
+}
 
 // Simula a visão que o cliente teria de seus dados (leitura, exceto abrir chamado/solicitação).
 export function PortalPage() {
@@ -16,26 +23,28 @@ export function PortalPage() {
   const tickets = useQuery({ queryKey: ['tickets'], queryFn: api.getTickets })
   const serviceRequests = useQuery({ queryKey: ['serviceRequests'], queryFn: api.getServiceRequests })
   const finance = useQuery({ queryKey: ['finance'], queryFn: api.getFinance })
-  const [newTicket, setNewTicket] = useState('')
+  const [newTicket, setNewTicket] = useState<NewTicket>({ subject: '', category: 'Portal', priority: 'media', slaHours: 24 })
+  const [showTicketModal, setShowTicketModal] = useState(false)
   const [newRequest, setNewRequest] = useState('')
   const queryClient = useQueryClient()
 
   if (projects.isLoading) return <Loading />
 
   const openTicket = async () => {
-    if (!newTicket.trim()) return
+    if (!newTicket.subject.trim()) return
     await createEntity('tickets', {
       id: `tk-${Date.now()}`,
-      subject: newTicket.trim(),
+      subject: newTicket.subject.trim(),
       requester: PORTAL_CLIENT,
-      category: 'Portal',
-      priority: 'media',
+      category: newTicket.category,
+      priority: newTicket.priority,
       status: 'aberto',
-      slaHours: 24,
+      slaHours: newTicket.slaHours,
       createdAt: new Date().toISOString().slice(0, 10),
     })
     await queryClient.invalidateQueries({ queryKey: ['tickets'] })
-    setNewTicket('')
+    setNewTicket({ subject: '', category: 'Portal', priority: 'media', slaHours: 24 })
+    setShowTicketModal(false)
   }
 
   const openRequest = async () => {
@@ -128,20 +137,80 @@ export function PortalPage() {
 
       {view === 'chamados' && (
         <div>
-          <Card className="mb-4 flex items-center gap-2 p-3">
-            <input
-              value={newTicket}
-              onChange={(e) => setNewTicket(e.target.value)}
-              placeholder="Descreva o problema…"
-              className="flex-1 rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
-            />
+          <Card className="mb-4 p-3">
             <button
-              onClick={openTicket}
-              className="rounded-lg bg-indigo-500 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-600"
+              onClick={() => setShowTicketModal(true)}
+              className="w-full rounded-lg bg-indigo-500 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-600"
             >
               Abrir chamado
             </button>
           </Card>
+          <Modal
+            open={showTicketModal}
+            onClose={() => setShowTicketModal(false)}
+            title="Novo chamado"
+            footer={
+              <>
+                <button onClick={() => setShowTicketModal(false)} className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
+                  Cancelar
+                </button>
+                <button onClick={openTicket} className="rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-600">
+                  Abrir
+                </button>
+              </>
+            }
+          >
+            <div className="space-y-3">
+              <input
+                value={newTicket.subject}
+                onChange={(e) => setNewTicket({ ...newTicket, subject: e.target.value })}
+                placeholder="Descrição do problema…"
+                className="w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+              />
+              <div className="grid grid-cols-3 gap-2">
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                  Categoria
+                  <select
+                    value={newTicket.category}
+                    onChange={(e) => setNewTicket({ ...newTicket, category: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                  >
+                    <option value="Portal">Portal</option>
+                    <option value="Suporte">Suporte</option>
+                    <option value="Bug">Bug</option>
+                    <option value="Feature Request">Feature Request</option>
+                  </select>
+                </label>
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                  Prioridade
+                  <select
+                    value={newTicket.priority}
+                    onChange={(e) => setNewTicket({ ...newTicket, priority: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                  >
+                    <option value="baixa">Baixa</option>
+                    <option value="media">Média</option>
+                    <option value="alta">Alta</option>
+                    <option value="critica">Crítica</option>
+                  </select>
+                </label>
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                  SLA (h)
+                  <select
+                    value={newTicket.slaHours}
+                    onChange={(e) => setNewTicket({ ...newTicket, slaHours: Number(e.target.value) })}
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                  >
+                    <option value="4">4h</option>
+                    <option value="8">8h</option>
+                    <option value="24">24h</option>
+                    <option value="48">48h</option>
+                    <option value="72">72h</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+          </Modal>
           <TableWrap>
             <thead><tr><Th>Assunto</Th><Th>Categoria</Th><Th>SLA</Th><Th>Status</Th></tr></thead>
             <tbody>
