@@ -1,8 +1,37 @@
 import { useEffect, type ReactNode } from 'react'
 import { X } from 'lucide-react'
+import { dateBR } from '../lib/format'
 
 export function cn(...parts: (string | false | null | undefined)[]) {
   return parts.filter(Boolean).join(' ')
+}
+
+/* Input nativo type="date": o formato exibido segue o locale do navegador/SO
+   (em geral mm/dd/yyyy), não o lang="pt-BR" da página. Sobrepomos o texto
+   real (transparente) com um rótulo formatado dd/mm/yyyy; clique e teclado
+   continuam indo para o input nativo (calendário, digitação). */
+export function DateInput({
+  value,
+  onChange,
+  className,
+}: {
+  value: string
+  onChange: (v: string) => void
+  className?: string
+}) {
+  return (
+    <div className={cn('relative', className)}>
+      <input
+        type="date"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm text-transparent caret-transparent outline-none dark:border-slate-700"
+      />
+      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-slate-900 dark:text-white">
+        {value ? dateBR(value) : ''}
+      </span>
+    </div>
+  )
 }
 
 export function Card({ className, children }: { className?: string; children: ReactNode }) {

@@ -140,24 +140,7 @@ INSERT INTO files (id, name, ext, size_kb, entity, uploaded_by, date) VALUES
 ('a4','Contrato_VerdeModa','pdf',640,'Cliente: Verde Moda','u1','2026-05-10'),
 ('a5','Export_faturas_junho','csv',88,'Financeiro','u2','2026-07-01');
 
--- ---- tasks ----
-INSERT INTO tasks (id, project_id, title, status, priority, assignee_id, due_date, tags) VALUES
-('t1','p1','Tela de login SSO','done','alta','u4','2026-06-20','["frontend","auth"]'::jsonb),
-('t2','p1','API de faturas','doing','alta','u2','2026-07-10','["backend"]'::jsonb),
-('t3','p1','Design system v2','review','media','u3','2026-07-08','["design"]'::jsonb),
-('t4','p2','Fluxo de checkout offline','doing','critica','u4','2026-07-05','["mobile"]'::jsonb),
-('t5','p2','Sincronizacao de estoque','todo','alta','u2','2026-07-15','["backend","sync"]'::jsonb),
-('t6','p2','Push notifications','backlog','baixa','u4','2026-07-25','["mobile"]'::jsonb),
-('t7','p3','Pipeline ingestao diaria','doing','alta','u2','2026-07-12','["data"]'::jsonb),
-('t8','p3','Modelagem dimensional','todo','media','u5','2026-07-20','["data","modelagem"]'::jsonb),
-('t9','p6','Medidas DAX de metas','review','media','u5','2026-07-06','["bi"]'::jsonb),
-('t10','p6','Publicar dashboard','todo','alta','u2','2026-07-18','["bi","deploy"]'::jsonb),
-('t11','p8','Cadastro de colaboradores','backlog','media','u4','2026-08-01','["frontend"]'::jsonb),
-('t12','p1','Testes E2E do portal','todo','media','u6','2026-07-22','["qa"]'::jsonb),
-('t13','p2','Correcao crash Android 14','backlog','critica','u6','2026-07-09','["mobile","bug"]'::jsonb),
-('t14','p3','RLS por unidade','backlog','alta','u5','2026-08-05','["seguranca"]'::jsonb);
-
--- ---- deliverables ----
+-- ---- deliverables (antes de tasks: FK entregable_id) ----
 INSERT INTO deliverables (id, project_id, name, status, owner_id, due_date) VALUES
 ('d1','p1','MVP Portal (fase 1)','em_aprovacao','u1','2026-07-12'),
 ('d2','p2','Build beta Android','em_producao','u2','2026-07-18'),
@@ -165,6 +148,23 @@ INSERT INTO deliverables (id, project_id, name, status, owner_id, due_date) VALU
 ('d4','p4','Novo site institucional','entregue','u3','2026-05-18'),
 ('d5','p6','Dashboard vendas v1','em_aprovacao','u5','2026-07-10'),
 ('d6','p8','Prototipo Portal RH','pendente','u5','2026-07-28');
+
+-- ---- tasks ----
+INSERT INTO tasks (id, entregable_id, title, status, priority, assignee_id, due_date, tags) VALUES
+('t1','d1','Tela de login SSO','done','alta','u4','2026-06-20','["frontend","auth"]'::jsonb),
+('t2','d1','API de faturas','doing','alta','u2','2026-07-10','["backend"]'::jsonb),
+('t3','d1','Design system v2','review','media','u3','2026-07-08','["design"]'::jsonb),
+('t4','d2','Fluxo de checkout offline','doing','critica','u4','2026-07-05','["mobile"]'::jsonb),
+('t5','d2','Sincronizacao de estoque','todo','alta','u2','2026-07-15','["backend","sync"]'::jsonb),
+('t6','d2','Push notifications','backlog','baixa','u4','2026-07-25','["mobile"]'::jsonb),
+('t7','d3','Pipeline ingestao diaria','doing','alta','u2','2026-07-12','["data"]'::jsonb),
+('t8','d3','Modelagem dimensional','todo','media','u5','2026-07-20','["data","modelagem"]'::jsonb),
+('t9','d5','Medidas DAX de metas','review','media','u5','2026-07-06','["bi"]'::jsonb),
+('t10','d5','Publicar dashboard','todo','alta','u2','2026-07-18','["bi","deploy"]'::jsonb),
+('t11','d6','Cadastro de colaboradores','backlog','media','u4','2026-08-01','["frontend"]'::jsonb),
+('t12','d1','Testes E2E do portal','todo','media','u6','2026-07-22','["qa"]'::jsonb),
+('t13','d2','Correcao crash Android 14','backlog','critica','u6','2026-07-09','["mobile","bug"]'::jsonb),
+('t14','d3','RLS por unidade','backlog','alta','u5','2026-08-05','["seguranca"]'::jsonb);
 
 -- ---- sprints ----
 INSERT INTO sprints (id, name, project_id, start_date, end_date, status, committed, done) VALUES

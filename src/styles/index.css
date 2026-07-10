@@ -7,6 +7,13 @@
   color-scheme: light dark;
 }
 
+/* O popup nativo de <select> não herda o tema escuro do app de forma
+   confiável entre navegadores; forçar light-scheme garante texto escuro
+   sobre fundo claro (legível) nas opções, independente do modo do app. */
+select {
+  color-scheme: light;
+}
+
 html,
 body,
 #root {

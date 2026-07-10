@@ -35,6 +35,11 @@ export interface Project {
 export type TaskStatus = 'backlog' | 'todo' | 'doing' | 'review' | 'done'
 export type Priority = 'baixa' | 'media' | 'alta' | 'critica'
 
+export interface ChecklistItem {
+  text: string
+  done: boolean
+}
+
 export interface Task {
   id: ID
   entregableId: ID
@@ -44,6 +49,8 @@ export interface Task {
   assigneeId: ID
   dueDate: string
   tags: string[]
+  description: string
+  checklist: ChecklistItem[]
 }
 
 export type DeliverableStatus =

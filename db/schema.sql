@@ -177,17 +177,6 @@ CREATE TABLE service_requests (
 
 -- ---- Dependem de projects/users ----
 
-CREATE TABLE tasks (
-  id text PRIMARY KEY,
-  project_id text NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  title text NOT NULL,
-  status task_status NOT NULL,
-  priority priority NOT NULL,
-  assignee_id text NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
-  due_date date NOT NULL,
-  tags jsonb NOT NULL DEFAULT '[]'::jsonb
-);
-
 CREATE TABLE deliverables (
   id text PRIMARY KEY,
   project_id text NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -195,6 +184,19 @@ CREATE TABLE deliverables (
   status deliverable_status NOT NULL,
   owner_id text NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   due_date date NOT NULL
+);
+
+CREATE TABLE tasks (
+  id text PRIMARY KEY,
+  entregable_id text NOT NULL REFERENCES deliverables(id) ON DELETE CASCADE,
+  title text NOT NULL,
+  status task_status NOT NULL,
+  priority priority NOT NULL,
+  assignee_id text NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  due_date date NOT NULL,
+  tags jsonb NOT NULL DEFAULT '[]'::jsonb,
+  description text NOT NULL DEFAULT '',
+  checklist jsonb NOT NULL DEFAULT '[]'::jsonb
 );
 
 CREATE TABLE sprints (
@@ -384,7 +386,7 @@ CREATE INDEX ON people (user_id);
 CREATE INDEX ON vacations (user_id);
 CREATE INDEX ON opportunities (owner_id);
 CREATE INDEX ON files (uploaded_by);
-CREATE INDEX ON tasks (project_id);
+CREATE INDEX ON tasks (entregable_id);
 CREATE INDEX ON tasks (assignee_id);
 CREATE INDEX ON deliverables (project_id);
 CREATE INDEX ON deliverables (owner_id);

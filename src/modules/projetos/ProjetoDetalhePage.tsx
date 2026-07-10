@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, Plus, Pencil, Trash2, ChevronDown } from 'lucide-react'
 import { api, createEntity, updateEntity, removeEntity } from '../../services/api'
-import { Card, PageHeader, StatTile, Badge, ProgressBar, Avatar, TableWrap, Th, Td, Loading, Modal, cn } from '../../components/ui'
+import { Card, PageHeader, StatTile, Badge, ProgressBar, Avatar, TableWrap, Th, Td, Loading, Modal, DateInput, cn } from '../../components/ui'
 import { projectStatusBadge, priorityBadge, taskStatusLabel, deliverableBadge, healthDot, brl, dateBR } from '../../lib/format'
 import type { Task, Deliverable, Priority, TaskStatus, DeliverableStatus } from '../../types'
 
@@ -16,6 +16,8 @@ const emptyTask = (entregableId: string): Task => ({
   assigneeId: '',
   dueDate: new Date().toISOString().slice(0, 10),
   tags: [],
+  description: '',
+  checklist: [],
 })
 
 const emptyDeliverable = (projectId: string): Deliverable => ({
@@ -38,7 +40,17 @@ export function ProjetoDetalhePage() {
   const finance = useQuery({ queryKey: ['finance'], queryFn: api.getFinance })
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [editingDeliverable, setEditingDeliverable] = useState<Deliverable | null>(null)
+  const [taskError, setTaskError] = useState<string | null>(null)
+  const [checklistOpen, setChecklistOpen] = useState(false)
+  const [newChecklistItem, setNewChecklistItem] = useState('')
+  const [expandedDels, setExpandedDels] = useState<Set<string>>(new Set())
   const queryClient = useQueryClient()
+
+  useEffect(() => {
+    setTaskError(null)
+    setNewChecklistItem('')
+    if (editingTask) setChecklistOpen(editingTask.checklist.length > 0)
+  }, [editingTask?.id])
 
   if (projects.isLoading) return <Loading />
   const p = projects.data?.find((x) => x.id === id)
@@ -49,18 +61,36 @@ export function ProjetoDetalhePage() {
   const pDels = deliverables.data?.filter((d) => d.projectId === p.id) ?? []
   const pFin = finance.data?.filter((f) => f.projectId === p.id) ?? []
   const userOf = (uid: string) => users.data?.find((u) => u.id === uid)
-  const [expandedDels, setExpandedDels] = useState<Set<string>>(new Set())
 
   const saveTask = async () => {
     if (!editingTask?.title.trim()) return
-    if (isNew(tasks.data, editingTask.id)) await createEntity('tasks', editingTask)
-    else await updateEntity('tasks', editingTask.id, editingTask)
-    await queryClient.invalidateQueries({ queryKey: ['tasks'] })
-    setEditingTask(null)
+    setTaskError(null)
+    try {
+      if (isNew(tasks.data, editingTask.id)) await createEntity('tasks', editingTask)
+      else await updateEntity('tasks', editingTask.id, editingTask)
+      await queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      setEditingTask(null)
+    } catch (e) {
+      setTaskError(e instanceof Error ? e.message : 'Erro ao salvar tarefa')
+    }
   }
   const removeTask = async (taskId: string) => {
     await removeEntity('tasks', taskId)
     await queryClient.invalidateQueries({ queryKey: ['tasks'] })
+  }
+
+  const addChecklistItem = () => {
+    if (!editingTask || !newChecklistItem.trim()) return
+    setEditingTask({ ...editingTask, checklist: [...editingTask.checklist, { text: newChecklistItem.trim(), done: false }] })
+    setNewChecklistItem('')
+  }
+  const toggleChecklistItem = (idx: number) => {
+    if (!editingTask) return
+    setEditingTask({ ...editingTask, checklist: editingTask.checklist.map((c, i) => (i === idx ? { ...c, done: !c.done } : c)) })
+  }
+  const removeChecklistItem = (idx: number) => {
+    if (!editingTask) return
+    setEditingTask({ ...editingTask, checklist: editingTask.checklist.filter((_, i) => i !== idx) })
   }
 
   const saveDeliverable = async () => {
@@ -227,17 +257,27 @@ export function ProjetoDetalhePage() {
       >
         {editingTask && (
           <div className="space-y-3">
+            {taskError && (
+              <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">{taskError}</p>
+            )}
             <input
               value={editingTask.title}
               onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
               placeholder="Título da tarefa"
               className="w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
             />
+            <textarea
+              value={editingTask.description}
+              onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
+              placeholder="Descrição da tarefa"
+              rows={3}
+              className="w-full resize-none rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+            />
             <div className="grid grid-cols-3 gap-2">
               <select
                 value={editingTask.status}
                 onChange={(e) => setEditingTask({ ...editingTask, status: e.target.value as TaskStatus })}
-                className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:text-white"
               >
                 <option value="backlog">Backlog</option>
                 <option value="todo">A fazer</option>
@@ -248,7 +288,7 @@ export function ProjetoDetalhePage() {
               <select
                 value={editingTask.priority}
                 onChange={(e) => setEditingTask({ ...editingTask, priority: e.target.value as Priority })}
-                className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:text-white"
               >
                 <option value="baixa">Baixa</option>
                 <option value="media">Média</option>
@@ -258,7 +298,7 @@ export function ProjetoDetalhePage() {
               <select
                 value={editingTask.assigneeId}
                 onChange={(e) => setEditingTask({ ...editingTask, assigneeId: e.target.value })}
-                className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                className="rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:text-white"
               >
                 <option value="">Responsável…</option>
                 {(users.data ?? []).map((u) => (
@@ -268,13 +308,69 @@ export function ProjetoDetalhePage() {
             </div>
             <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
               Prazo
-              <input
-                type="date"
+              <DateInput
                 value={editingTask.dueDate}
-                onChange={(e) => setEditingTask({ ...editingTask, dueDate: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                onChange={(v) => setEditingTask({ ...editingTask, dueDate: v })}
+                className="mt-1"
               />
             </label>
+
+            <div className="rounded-lg border border-slate-200 dark:border-slate-700">
+              <button
+                type="button"
+                onClick={() => setChecklistOpen((v) => !v)}
+                className="flex w-full items-center gap-1.5 px-3 py-2 text-left text-xs font-semibold text-slate-600 dark:text-slate-300"
+              >
+                <ChevronDown size={14} className={cn('text-slate-400 transition-transform', checklistOpen && 'rotate-180')} />
+                Checklist
+                {editingTask.checklist.length > 0 && (
+                  <span className="text-slate-400">
+                    ({editingTask.checklist.filter((c) => c.done).length}/{editingTask.checklist.length})
+                  </span>
+                )}
+              </button>
+              {checklistOpen && (
+                <div className="space-y-1.5 border-t border-slate-200 px-3 py-2 dark:border-slate-700">
+                  {editingTask.checklist.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={item.done}
+                        onChange={() => toggleChecklistItem(idx)}
+                        className="h-3.5 w-3.5 shrink-0 rounded border-slate-300"
+                      />
+                      <span className={cn('flex-1 text-sm text-slate-700 dark:text-slate-200', item.done && 'text-slate-400 line-through dark:text-slate-500')}>
+                        {item.text}
+                      </span>
+                      <button type="button" onClick={() => removeChecklistItem(idx)} title="Remover" className="shrink-0 text-slate-400 hover:text-rose-500">
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                  <div className="flex gap-1.5 pt-1">
+                    <input
+                      value={newChecklistItem}
+                      onChange={(e) => setNewChecklistItem(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          addChecklistItem()
+                        }
+                      }}
+                      placeholder="Novo item…"
+                      className="flex-1 rounded-lg border border-slate-200 bg-transparent px-2 py-1 text-xs dark:border-slate-700"
+                    />
+                    <button
+                      type="button"
+                      onClick={addChecklistItem}
+                      className="inline-flex items-center rounded-lg bg-indigo-500 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-600"
+                    >
+                      <Plus size={12} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </Modal>
@@ -305,7 +401,7 @@ export function ProjetoDetalhePage() {
             <select
               value={editingDeliverable.ownerId}
               onChange={(e) => setEditingDeliverable({ ...editingDeliverable, ownerId: e.target.value })}
-              className="w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+              className="w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:text-white"
             >
               <option value="">Responsável…</option>
               {(users.data ?? []).map((u) => (
@@ -316,7 +412,7 @@ export function ProjetoDetalhePage() {
               <select
                 value={editingDeliverable.status}
                 onChange={(e) => setEditingDeliverable({ ...editingDeliverable, status: e.target.value as DeliverableStatus })}
-                className="flex-1 rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                className="flex-1 rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:text-white"
               >
                 <option value="pendente">Pendente</option>
                 <option value="em_producao">Em produção</option>
@@ -326,11 +422,10 @@ export function ProjetoDetalhePage() {
               </select>
               <label className="flex-1 text-xs font-medium text-slate-500 dark:text-slate-400">
                 Prazo
-                <input
-                  type="date"
+                <DateInput
                   value={editingDeliverable.dueDate}
-                  onChange={(e) => setEditingDeliverable({ ...editingDeliverable, dueDate: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                  onChange={(v) => setEditingDeliverable({ ...editingDeliverable, dueDate: v })}
+                  className="mt-1"
                 />
               </label>
             </div>

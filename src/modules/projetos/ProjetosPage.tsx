@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { api, createEntity, updateEntity, removeEntity } from '../../services/api'
-import { PageHeader, Badge, ProgressBar, Avatar, TableWrap, Th, Td, Loading, Modal, cn } from '../../components/ui'
+import { PageHeader, Badge, ProgressBar, Avatar, TableWrap, Th, Td, Loading, Modal, DateInput, cn } from '../../components/ui'
 import { projectStatusBadge, healthDot, brl, dateBR } from '../../lib/format'
 import type { Project, ProjectStatus } from '../../types'
 
@@ -184,7 +184,7 @@ export function ProjetosPage() {
             <select
               value={editing.ownerId}
               onChange={(e) => setEditing({ ...editing, ownerId: e.target.value })}
-              className="w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+              className="w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:text-white"
             >
               <option value="">Responsável…</option>
               {(users ?? []).map((u) => (
@@ -194,20 +194,18 @@ export function ProjetosPage() {
             <div className="grid grid-cols-2 gap-2">
               <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                 Data de início
-                <input
-                  type="date"
+                <DateInput
                   value={editing.startDate}
-                  onChange={(e) => setEditing({ ...editing, startDate: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                  onChange={(v) => setEditing({ ...editing, startDate: v })}
+                  className="mt-1"
                 />
               </label>
               <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                 Data de término
-                <input
-                  type="date"
+                <DateInput
                   value={editing.endDate}
-                  onChange={(e) => setEditing({ ...editing, endDate: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                  onChange={(v) => setEditing({ ...editing, endDate: v })}
+                  className="mt-1"
                 />
               </label>
             </div>
@@ -227,7 +225,7 @@ export function ProjetosPage() {
                 <select
                   value={editing.status}
                   onChange={(e) => setEditing({ ...editing, status: e.target.value as ProjectStatus })}
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:text-white"
                 >
                   <option value="planejado">Planejado</option>
                   <option value="em_andamento">Em andamento</option>
