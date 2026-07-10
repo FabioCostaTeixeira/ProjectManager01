@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { CheckSquare, Square } from 'lucide-react'
-import { api } from '../../services/api'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { CheckSquare, Square, Plus, X } from 'lucide-react'
+import { api, createEntity } from '../../services/api'
 import { useNotesStore } from '../../stores/notesStore'
 import { PageHeader, Loading, cn } from '../../components/ui'
 
 export function AnotacoesPage() {
+  const queryClient = useQueryClient()
   const { data: columns, isLoading } = useQuery({ queryKey: ['noteColumns'], queryFn: api.getNoteColumns })
   const { data: cardData } = useQuery({ queryKey: ['noteCards'], queryFn: api.getNoteCards })
   const cards = useNotesStore((s) => s.cards)
@@ -17,8 +18,18 @@ export function AnotacoesPage() {
   }, [cardData, setAll])
   const [dragId, setDragId] = useState<string | null>(null)
   const [overCol, setOverCol] = useState<string | null>(null)
+  const [addingCol, setAddingCol] = useState(false)
+  const [newColTitle, setNewColTitle] = useState('')
 
   if (isLoading) return <Loading />
+
+  const addColumn = async () => {
+    if (!newColTitle.trim()) return
+    await createEntity('note-columns', { id: `nc-${Date.now()}`, title: newColTitle.trim() })
+    await queryClient.invalidateQueries({ queryKey: ['noteColumns'] })
+    setNewColTitle('')
+    setAddingCol(false)
+  }
 
   return (
     <div>
@@ -82,6 +93,40 @@ export function AnotacoesPage() {
             </div>
           )
         })}
+
+        {addingCol ? (
+          <div className="flex min-h-[160px] flex-col rounded-xl border border-dashed border-indigo-300 bg-indigo-50/40 p-2 dark:border-indigo-500/40 dark:bg-indigo-500/5">
+            <div className="flex items-center gap-1.5">
+              <input
+                autoFocus
+                value={newColTitle}
+                onChange={(e) => setNewColTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { e.preventDefault(); addColumn() }
+                  if (e.key === 'Escape') { setAddingCol(false); setNewColTitle('') }
+                }}
+                placeholder="Nome da coluna…"
+                className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900"
+              />
+              <button onClick={() => { setAddingCol(false); setNewColTitle('') }} className="rounded p-1.5 text-slate-400 hover:text-rose-500">
+                <X size={15} />
+              </button>
+            </div>
+            <button
+              onClick={addColumn}
+              className="mt-2 inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-600"
+            >
+              <Plus size={14} /> Criar coluna
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setAddingCol(true)}
+            className="flex min-h-[160px] flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 text-sm font-medium text-slate-400 hover:border-indigo-400 hover:text-indigo-500 dark:border-slate-700"
+          >
+            <Plus size={18} /> Nova coluna
+          </button>
+        )}
       </div>
     </div>
   )

@@ -39,7 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const data = toSnake(body)
       const cols = Object.keys(data)
       if (cols.length === 0) return res.status(400).json({ error: 'Corpo vazio' })
-      const sets = cols.map((c, i) => `${c} = $${i + 1}`).join(', ')
+      const sets = cols.map((c, i) => `"${c}" = $${i + 1}`).join(', ')
       const { rows } = await pool.query(
         `UPDATE ${SCHEMA}.${table} SET ${sets} WHERE ${pk} = $${cols.length + 1} RETURNING *`,
         [...Object.values(data), id],

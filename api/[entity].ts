@@ -37,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const cols = Object.keys(data)
       const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ')
       const { rows } = await pool.query(
-        `INSERT INTO ${SCHEMA}.${table} (${cols.join(', ')}) VALUES (${placeholders}) RETURNING *`,
+        `INSERT INTO ${SCHEMA}.${table} (${cols.map((c) => `"${c}"`).join(', ')}) VALUES (${placeholders}) RETURNING *`,
         Object.values(data),
       )
       return res.status(201).json(clean(rows[0]))

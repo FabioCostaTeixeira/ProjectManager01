@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
-import { ArrowLeft, Plus, Pencil, Trash2, ChevronDown, BarChart3 } from 'lucide-react'
+import { ArrowLeft, Plus, Pencil, Trash2, ChevronDown, BarChart3, Link2, X } from 'lucide-react'
 import { api, createEntity, updateEntity, removeEntity } from '../../services/api'
 import { Card, PageHeader, StatTile, Badge, ProgressBar, Avatar, TableWrap, Th, Td, Loading, Modal, Sheet, DateInput, cn } from '../../components/ui'
 import { projectStatusBadge, priorityBadge, taskStatusLabel, deliverableBadge, healthDot, brl, dateBR } from '../../lib/format'
-import type { Task, Deliverable, Priority, TaskStatus, DeliverableStatus, User } from '../../types'
+import { resolveEntityName } from '../../lib/dependencies'
+import type { Task, Deliverable, Priority, TaskStatus, DeliverableStatus, User, DependencyKind } from '../../types'
 
 const emptyTask = (entregableId: string): Task => ({
   id: `t-${Date.now()}`,
@@ -122,6 +123,112 @@ function TaskList({
   )
 }
 
+function DependencyPicker({
+  open,
+  onClose,
+  excludeTaskId,
+  selected,
+  onToggle,
+}: {
+  open: boolean
+  onClose: () => void
+  excludeTaskId: string
+  selected: Set<string>
+  onToggle: (id: string) => void
+}) {
+  const projects = useQuery({ queryKey: ['projects'], queryFn: api.getProjects })
+  const deliverables = useQuery({ queryKey: ['deliverables'], queryFn: api.getDeliverables })
+  const tasks = useQuery({ queryKey: ['tasks'], queryFn: api.getTasks })
+  const [search, setSearch] = useState('')
+  const [openProjects, setOpenProjects] = useState<Set<string>>(new Set())
+  const [openDels, setOpenDels] = useState<Set<string>>(new Set())
+
+  if (!open) return null
+  const q = search.trim().toLowerCase()
+  const toggleSet = (set: Set<string>, setFn: (s: Set<string>) => void, id: string) => {
+    const next = new Set(set)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setFn(next)
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Selecionar dependência"
+      footer={
+        <button onClick={onClose} className="rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-600">
+          Concluir
+        </button>
+      }
+    >
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Buscar projeto, entregável ou tarefa…"
+        className="mb-3 w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+      />
+      <div className="max-h-96 space-y-1 overflow-y-auto">
+        {(projects.data ?? []).map((p) => {
+          const pDels = (deliverables.data ?? []).filter((d) => d.projectId === p.id)
+          const dTasksOf = (delId: string) => (tasks.data ?? []).filter((t) => t.entregableId === delId && t.id !== excludeTaskId)
+          const hasMatchInside = pDels.some(
+            (d) => d.name.toLowerCase().includes(q) || dTasksOf(d.id).some((t) => t.title.toLowerCase().includes(q)),
+          )
+          if (q && !p.name.toLowerCase().includes(q) && !hasMatchInside) return null
+          const isOpen = openProjects.has(p.id) || (!!q && hasMatchInside)
+          return (
+            <div key={p.id}>
+              <div className="flex items-center gap-1.5 rounded px-1 py-1 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                <button type="button" onClick={() => toggleSet(openProjects, setOpenProjects, p.id)} className="text-slate-400">
+                  <ChevronDown size={13} className={cn('transition-transform', isOpen && 'rotate-180')} />
+                </button>
+                <input type="checkbox" checked={selected.has(p.id)} onChange={() => onToggle(p.id)} className="h-3.5 w-3.5 rounded border-slate-300" />
+                <span className="text-sm font-medium text-slate-900 dark:text-white">{p.name}</span>
+              </div>
+              {isOpen && (
+                <div className="ml-6 space-y-1">
+                  {pDels
+                    .filter((d) => !q || d.name.toLowerCase().includes(q) || dTasksOf(d.id).some((t) => t.title.toLowerCase().includes(q)))
+                    .map((d) => {
+                      const dTasks = dTasksOf(d.id)
+                      const dOpen = openDels.has(d.id) || !!q
+                      return (
+                        <div key={d.id}>
+                          <div className="flex items-center gap-1.5 rounded px-1 py-1 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                            <button type="button" onClick={() => toggleSet(openDels, setOpenDels, d.id)} className="text-slate-400">
+                              <ChevronDown size={13} className={cn('transition-transform', dOpen && 'rotate-180')} />
+                            </button>
+                            <input type="checkbox" checked={selected.has(d.id)} onChange={() => onToggle(d.id)} className="h-3.5 w-3.5 rounded border-slate-300" />
+                            <span className="text-sm text-slate-700 dark:text-slate-200">{d.name}</span>
+                          </div>
+                          {dOpen && (
+                            <div className="ml-6 space-y-1">
+                              {dTasks
+                                .filter((t) => !q || t.title.toLowerCase().includes(q))
+                                .map((t) => (
+                                  <label key={t.id} className="flex items-center gap-1.5 rounded px-1 py-1 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                    <input type="checkbox" checked={selected.has(t.id)} onChange={() => onToggle(t.id)} className="h-3.5 w-3.5 rounded border-slate-300" />
+                                    <span className="text-xs text-slate-600 dark:text-slate-300">{t.title}</span>
+                                  </label>
+                                ))}
+                              {dTasks.length === 0 && <p className="px-1 text-xs text-slate-400">Sem tarefas</p>}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </Modal>
+  )
+}
+
 export function ProjetoDetalhePage() {
   const { id } = useParams()
   const [searchParams] = useSearchParams()
@@ -131,18 +238,30 @@ export function ProjetoDetalhePage() {
   const deliverables = useQuery({ queryKey: ['deliverables'], queryFn: api.getDeliverables })
   const users = useQuery({ queryKey: ['users'], queryFn: api.getUsers })
   const finance = useQuery({ queryKey: ['finance'], queryFn: api.getFinance })
+  const dependencies = useQuery({ queryKey: ['dependencies'], queryFn: api.getDependencies })
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [editingDeliverable, setEditingDeliverable] = useState<Deliverable | null>(null)
   const [taskError, setTaskError] = useState<string | null>(null)
   const [checklistOpen, setChecklistOpen] = useState(false)
   const [newChecklistItem, setNewChecklistItem] = useState('')
   const [expandedDels, setExpandedDels] = useState<Set<string>>(new Set())
+  const [depEnabled, setDepEnabled] = useState(false)
+  const [depKind, setDepKind] = useState<DependencyKind>('aguarda')
+  const [depTargets, setDepTargets] = useState<Set<string>>(new Set())
+  const [depPickerOpen, setDepPickerOpen] = useState(false)
   const queryClient = useQueryClient()
 
   useEffect(() => {
     setTaskError(null)
     setNewChecklistItem('')
-    if (editingTask) setChecklistOpen(editingTask.checklist.length > 0)
+    setDepPickerOpen(false)
+    if (editingTask) {
+      setChecklistOpen(editingTask.checklist.length > 0)
+      const existingDeps = dependencies.data?.filter((dep) => dep.from === editingTask.id) ?? []
+      setDepEnabled(existingDeps.length > 0)
+      setDepKind(existingDeps[0]?.kind ?? 'aguarda')
+      setDepTargets(new Set(existingDeps.map((dep) => dep.to)))
+    }
   }, [editingTask?.id])
 
   useEffect(() => {
@@ -167,11 +286,41 @@ export function ProjetoDetalhePage() {
     try {
       if (isNew(tasks.data, editingTask.id)) await createEntity('tasks', editingTask)
       else await updateEntity('tasks', editingTask.id, editingTask)
+
+      const existingDeps = dependencies.data?.filter((dep) => dep.from === editingTask.id) ?? []
+      const desired = depEnabled ? [...depTargets] : []
+      const toRemove = existingDeps.filter((dep) => !desired.includes(dep.to))
+      const toAdd = desired.filter((to) => !existingDeps.some((dep) => dep.to === to))
+      const toUpdateKind = existingDeps.filter((dep) => desired.includes(dep.to) && dep.kind !== depKind)
+      await Promise.all([
+        ...toRemove.map((dep) => removeEntity('dependencies', dep.id)),
+        ...toAdd.map((to) =>
+          createEntity('dependencies', {
+            id: `dep-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            from: editingTask.id,
+            to,
+            kind: depKind,
+            status: 'pendente',
+            notified: false,
+          }),
+        ),
+        ...toUpdateKind.map((dep) => updateEntity('dependencies', dep.id, { kind: depKind })),
+      ])
+
       await queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      await queryClient.invalidateQueries({ queryKey: ['dependencies'] })
       setEditingTask(null)
     } catch (e) {
       setTaskError(e instanceof Error ? e.message : 'Erro ao salvar tarefa')
     }
+  }
+  const toggleDepTarget = (targetId: string) => {
+    setDepTargets((prev) => {
+      const next = new Set(prev)
+      if (next.has(targetId)) next.delete(targetId)
+      else next.add(targetId)
+      return next
+    })
   }
   const removeTask = async (taskId: string) => {
     await removeEntity('tasks', taskId)
@@ -450,9 +599,61 @@ export function ProjetoDetalhePage() {
                 </div>
               )}
             </div>
+
+            <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+              <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={depEnabled}
+                  onChange={(e) => setDepEnabled(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-slate-300"
+                />
+                Tem dependência
+              </label>
+              {depEnabled && (
+                <div className="mt-2 space-y-2">
+                  <select
+                    value={depKind}
+                    onChange={(e) => setDepKind(e.target.value as DependencyKind)}
+                    className="w-full rounded-lg border border-slate-200 bg-transparent px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:text-white"
+                  >
+                    <option value="aguarda">É bloqueado por</option>
+                    <option value="bloqueia">Bloqueia</option>
+                    <option value="relacionada">Relacionada</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setDepPickerOpen(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-xs text-slate-500 hover:border-indigo-400 hover:text-indigo-500 dark:border-slate-600 dark:text-slate-400"
+                  >
+                    <Link2 size={12} /> Selecionar item ({depTargets.size})
+                  </button>
+                  {depTargets.size > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {[...depTargets].map((tid) => (
+                        <span key={tid} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                          {resolveEntityName(tid, { projects: projects.data, deliverables: deliverables.data, tasks: tasks.data })}
+                          <button type="button" onClick={() => toggleDepTarget(tid)} className="text-slate-400 hover:text-rose-500">
+                            <X size={11} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </Sheet>
+
+      <DependencyPicker
+        open={depPickerOpen}
+        onClose={() => setDepPickerOpen(false)}
+        excludeTaskId={editingTask?.id ?? ''}
+        selected={depTargets}
+        onToggle={toggleDepTarget}
+      />
 
       <Modal
         open={editingDeliverable !== null}
