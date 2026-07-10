@@ -9,6 +9,7 @@ import { SprintPage } from './modules/sprint/SprintPage'
 import { ProjetosPage } from './modules/projetos/ProjetosPage'
 import { ProjetoDetalhePage } from './modules/projetos/ProjetoDetalhePage'
 import { EntregaveisPage } from './modules/entregaveis/EntregaveisPage'
+import { PortalMetricasPage } from './modules/entregaveis/PortalMetricasPage'
 import { DemandasPage } from './modules/demandas/DemandasPage'
 import { ChamadosPage } from './modules/chamados/ChamadosPage'
 import { CapacidadePage } from './modules/capacidade/CapacidadePage'
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="/projetos/:id" element={<ProjetoDetalhePage />} />
           <Route path="/demandas" element={<DemandasPage />} />
           <Route path="/entregaveis" element={<EntregaveisPage />} />
+          <Route path="/entregaveis/:id/metricas" element={<PortalMetricasPage />} />
           <Route path="/planejamento" element={<PlanejamentoPage />} />
           <Route path="/dependencias" element={<DependenciasPage />} />
           <Route path="/anotacoes" element={<AnotacoesPage />} />

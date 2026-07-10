@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Plus, Pencil, Trash2, ChevronDown } from 'lucide-react'
+import { useParams, useSearchParams, Link } from 'react-router-dom'
+import { ArrowLeft, Plus, Pencil, Trash2, ChevronDown, BarChart3 } from 'lucide-react'
 import { api, createEntity, updateEntity, removeEntity } from '../../services/api'
-import { Card, PageHeader, StatTile, Badge, ProgressBar, Avatar, TableWrap, Th, Td, Loading, Modal, DateInput, cn } from '../../components/ui'
+import { Card, PageHeader, StatTile, Badge, ProgressBar, Avatar, TableWrap, Th, Td, Loading, Modal, Sheet, DateInput, cn } from '../../components/ui'
 import { projectStatusBadge, priorityBadge, taskStatusLabel, deliverableBadge, healthDot, brl, dateBR } from '../../lib/format'
-import type { Task, Deliverable, Priority, TaskStatus, DeliverableStatus } from '../../types'
+import type { Task, Deliverable, Priority, TaskStatus, DeliverableStatus, User } from '../../types'
 
 const emptyTask = (entregableId: string): Task => ({
   id: `t-${Date.now()}`,
@@ -31,10 +31,103 @@ const emptyDeliverable = (projectId: string): Deliverable => ({
 
 const isNew = <T extends { id: string }>(items: T[] | undefined, id: string) => !items?.some((x) => x.id === id)
 
+const priorityOrder: Record<Priority, number> = { critica: 0, alta: 1, media: 2, baixa: 3 }
+type SortBy = 'prazo' | 'prioridade' | 'responsavel'
+
+function TaskList({
+  tasks,
+  userOf,
+  onSelect,
+  onDelete,
+}: {
+  tasks: Task[]
+  userOf: (id: string) => User | undefined
+  onSelect: (t: Task) => void
+  onDelete: (id: string) => void
+}) {
+  const [statusFilter, setStatusFilter] = useState<TaskStatus | 'todos'>('todos')
+  const [priorityFilter, setPriorityFilter] = useState<Priority | 'todas'>('todas')
+  const [sortBy, setSortBy] = useState<SortBy>('prazo')
+
+  if (tasks.length === 0) return <p className="text-xs text-slate-400">Sem tarefas</p>
+
+  const filtered = tasks
+    .filter((t) => statusFilter === 'todos' || t.status === statusFilter)
+    .filter((t) => priorityFilter === 'todas' || t.priority === priorityFilter)
+    .slice()
+    .sort((a, b) => {
+      if (sortBy === 'prioridade') return priorityOrder[a.priority] - priorityOrder[b.priority]
+      if (sortBy === 'responsavel') return (userOf(a.assigneeId)?.name ?? '').localeCompare(userOf(b.assigneeId)?.name ?? '')
+      return a.dueDate.localeCompare(b.dueDate)
+    })
+
+  const selectCls = 'rounded border border-slate-200 bg-transparent px-2 py-1 text-xs text-slate-900 dark:border-slate-700 dark:text-white'
+
+  return (
+    <>
+      <div className="mb-2 flex flex-wrap gap-1.5">
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as TaskStatus | 'todos')} className={selectCls}>
+          <option value="todos">Status: todos</option>
+          <option value="backlog">Backlog</option>
+          <option value="todo">A fazer</option>
+          <option value="doing">Fazendo</option>
+          <option value="review">Revisão</option>
+          <option value="done">Feito</option>
+        </select>
+        <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as Priority | 'todas')} className={selectCls}>
+          <option value="todas">Prioridade: todas</option>
+          <option value="baixa">Baixa</option>
+          <option value="media">Média</option>
+          <option value="alta">Alta</option>
+          <option value="critica">Crítica</option>
+        </select>
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)} className={selectCls}>
+          <option value="prazo">Ordenar: prazo</option>
+          <option value="prioridade">Ordenar: prioridade</option>
+          <option value="responsavel">Ordenar: responsável</option>
+        </select>
+      </div>
+      {filtered.length === 0 ? (
+        <p className="text-xs text-slate-400">Nenhuma tarefa com esse filtro</p>
+      ) : (
+        <TableWrap>
+          <thead><tr><Th>Tarefa</Th><Th>Status</Th><Th>Prioridade</Th><Th>Resp.</Th><Th>Prazo</Th><Th>Ações</Th></tr></thead>
+          <tbody>
+            {filtered.map((t) => {
+              const u = userOf(t.assigneeId)
+              return (
+                <tr key={t.id} onClick={() => onSelect(t)} className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/60">
+                  <Td className="font-medium text-slate-900 dark:text-white">{t.title}</Td>
+                  <Td className="text-xs">{taskStatusLabel[t.status]}</Td>
+                  <Td><Badge className={priorityBadge[t.priority].className}>{priorityBadge[t.priority].label}</Badge></Td>
+                  <Td>{u && <Avatar name={u.name} color={u.color} size={20} />}</Td>
+                  <Td className="text-xs text-slate-500">{dateBR(t.dueDate)}</Td>
+                  <Td>
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                      <button onClick={() => onSelect(t)} title="Editar" className="rounded p-1 text-slate-400 hover:text-indigo-500">
+                        <Pencil size={13} />
+                      </button>
+                      <button onClick={() => onDelete(t.id)} title="Excluir" className="rounded p-1 text-slate-400 hover:text-rose-500">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </Td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </TableWrap>
+      )}
+    </>
+  )
+}
+
 export function ProjetoDetalhePage() {
   const { id } = useParams()
+  const [searchParams] = useSearchParams()
+  const focusDeliverable = searchParams.get('entregavel')
   const projects = useQuery({ queryKey: ['projects'], queryFn: api.getProjects })
-  const tasks = useQuery({ queryKey: ['tasks'], queryFn: api.getTasks })
+  const tasks = useQuery({ queryKey: ['tasks'], queryFn: api.getTasks, refetchInterval: 4000 })
   const deliverables = useQuery({ queryKey: ['deliverables'], queryFn: api.getDeliverables })
   const users = useQuery({ queryKey: ['users'], queryFn: api.getUsers })
   const finance = useQuery({ queryKey: ['finance'], queryFn: api.getFinance })
@@ -51,6 +144,12 @@ export function ProjetoDetalhePage() {
     setNewChecklistItem('')
     if (editingTask) setChecklistOpen(editingTask.checklist.length > 0)
   }, [editingTask?.id])
+
+  useEffect(() => {
+    if (!focusDeliverable) return
+    setExpandedDels((prev) => new Set(prev).add(focusDeliverable))
+    document.getElementById(`entregavel-${focusDeliverable}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [focusDeliverable])
 
   if (projects.isLoading) return <Loading />
   const p = projects.data?.find((x) => x.id === id)
@@ -147,7 +246,14 @@ export function ProjetoDetalhePage() {
               const dTasks = tasks.data?.filter((t) => t.entregableId === d.id) ?? []
               const dOwner = userOf(d.ownerId)
               return (
-                <div key={d.id} className="rounded-lg border border-slate-200 dark:border-slate-700">
+                <div
+                  key={d.id}
+                  id={`entregavel-${d.id}`}
+                  className={cn(
+                    'rounded-lg border border-slate-200 dark:border-slate-700',
+                    focusDeliverable === d.id && 'ring-2 ring-indigo-400 dark:ring-indigo-500',
+                  )}
+                >
                   <button
                     onClick={() => {
                       const newSet = new Set(expandedDels)
@@ -165,6 +271,9 @@ export function ProjetoDetalhePage() {
                     <Badge className={deliverableBadge[d.status].className}>{deliverableBadge[d.status].label}</Badge>
                     {dOwner && <Avatar name={dOwner.name} color={dOwner.color} size={24} />}
                     <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                      <Link to={`/entregaveis/${d.id}/metricas`} title="Ver métricas do portal" className="rounded p-1 text-slate-400 hover:text-indigo-500">
+                        <BarChart3 size={13} />
+                      </Link>
                       <button onClick={() => setEditingDeliverable({ ...d })} title="Editar" className="rounded p-1 text-slate-400 hover:text-indigo-500">
                         <Pencil size={13} />
                       </button>
@@ -184,37 +293,7 @@ export function ProjetoDetalhePage() {
                           <Plus size={12} /> Nova
                         </button>
                       </div>
-                      {dTasks.length === 0 ? (
-                        <p className="text-xs text-slate-400">Sem tarefas</p>
-                      ) : (
-                        <TableWrap>
-                          <thead><tr><Th>Tarefa</Th><Th>Status</Th><Th>Prioridade</Th><Th>Resp.</Th><Th>Prazo</Th><Th>Ações</Th></tr></thead>
-                          <tbody>
-                            {dTasks.map((t) => {
-                              const u = userOf(t.assigneeId)
-                              return (
-                                <tr key={t.id}>
-                                  <Td className="font-medium text-slate-900 dark:text-white">{t.title}</Td>
-                                  <Td className="text-xs">{taskStatusLabel[t.status]}</Td>
-                                  <Td><Badge className={priorityBadge[t.priority].className}>{priorityBadge[t.priority].label}</Badge></Td>
-                                  <Td>{u && <Avatar name={u.name} color={u.color} size={20} />}</Td>
-                                  <Td className="text-xs text-slate-500">{dateBR(t.dueDate)}</Td>
-                                  <Td>
-                                    <div className="flex gap-1">
-                                      <button onClick={() => setEditingTask({ ...t })} title="Editar" className="rounded p-1 text-slate-400 hover:text-indigo-500">
-                                        <Pencil size={13} />
-                                      </button>
-                                      <button onClick={() => removeTask(t.id)} title="Excluir" className="rounded p-1 text-slate-400 hover:text-rose-500">
-                                        <Trash2 size={13} />
-                                      </button>
-                                    </div>
-                                  </Td>
-                                </tr>
-                              )
-                            })}
-                          </tbody>
-                        </TableWrap>
-                      )}
+                      <TaskList tasks={dTasks} userOf={userOf} onSelect={(t) => setEditingTask({ ...t })} onDelete={removeTask} />
                     </div>
                   )}
                 </div>
@@ -240,7 +319,7 @@ export function ProjetoDetalhePage() {
         )}
       </div>
 
-      <Modal
+      <Sheet
         open={editingTask !== null}
         onClose={() => setEditingTask(null)}
         title={editingTask && !isNew(tasks.data, editingTask.id) ? 'Editar tarefa' : 'Nova tarefa'}
@@ -373,7 +452,7 @@ export function ProjetoDetalhePage() {
             </div>
           </div>
         )}
-      </Modal>
+      </Sheet>
 
       <Modal
         open={editingDeliverable !== null}

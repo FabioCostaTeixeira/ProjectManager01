@@ -240,6 +240,48 @@ export function Modal({
   )
 }
 
+/* Painel lateral direito (drawer) — mesma API do Modal, usado quando o
+   conteúdo é melhor visitado "ao lado" do que centralizado (ex.: detalhe
+   de um item de uma lista, sem perder o contexto da lista atrás). */
+export function Sheet({
+  open,
+  onClose,
+  title,
+  children,
+  footer,
+}: {
+  open: boolean
+  onClose: () => void
+  title: string
+  children: ReactNode
+  footer?: ReactNode
+}) {
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, onClose])
+
+  if (!open) return null
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={onClose}>
+      <Card className="flex h-full w-full max-w-md flex-col rounded-none border-y-0 border-r-0">
+        <div onClick={(e) => e.stopPropagation()} className="flex h-full flex-col">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3 dark:border-slate-800">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">{title}</h2>
+            <button onClick={onClose} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+              <X size={16} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
+          {footer && <div className="flex justify-end gap-2 border-t border-slate-100 px-5 py-3 dark:border-slate-800">{footer}</div>}
+        </div>
+      </Card>
+    </div>
+  )
+}
+
 export function Loading({ label = 'Carregando…' }: { label?: string }) {
   return (
     <div className="flex items-center gap-2 py-10 text-sm text-slate-500 dark:text-slate-400">

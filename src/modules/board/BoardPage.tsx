@@ -17,7 +17,7 @@ export function BoardPage() {
   const queryClient = useQueryClient()
   const { data: users } = useQuery({ queryKey: ['users'], queryFn: api.getUsers })
   const { data: projects } = useQuery({ queryKey: ['projects'], queryFn: api.getProjects })
-  const { data: taskData } = useQuery({ queryKey: ['tasks'], queryFn: api.getTasks })
+  const { data: taskData } = useQuery({ queryKey: ['tasks'], queryFn: api.getTasks, refetchInterval: 4000 })
   useEffect(() => {
     if (taskData) setAll(taskData)
   }, [taskData, setAll])
