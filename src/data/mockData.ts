@@ -32,20 +32,20 @@ export const projects: Project[] = [
 ]
 
 export const tasks: Task[] = [
-  { id: 't1', projectId: 'p1', title: 'Tela de login SSO', status: 'done', priority: 'alta', assigneeId: 'u4', dueDate: '2026-06-20', tags: ['frontend', 'auth'] },
-  { id: 't2', projectId: 'p1', title: 'API de faturas', status: 'doing', priority: 'alta', assigneeId: 'u2', dueDate: '2026-07-10', tags: ['backend'] },
-  { id: 't3', projectId: 'p1', title: 'Design system v2', status: 'review', priority: 'media', assigneeId: 'u3', dueDate: '2026-07-08', tags: ['design'] },
-  { id: 't4', projectId: 'p2', title: 'Fluxo de checkout offline', status: 'doing', priority: 'critica', assigneeId: 'u4', dueDate: '2026-07-05', tags: ['mobile'] },
-  { id: 't5', projectId: 'p2', title: 'Sincronização de estoque', status: 'todo', priority: 'alta', assigneeId: 'u2', dueDate: '2026-07-15', tags: ['backend', 'sync'] },
-  { id: 't6', projectId: 'p2', title: 'Push notifications', status: 'backlog', priority: 'baixa', assigneeId: 'u4', dueDate: '2026-07-25', tags: ['mobile'] },
-  { id: 't7', projectId: 'p3', title: 'Pipeline ingestão diária', status: 'doing', priority: 'alta', assigneeId: 'u2', dueDate: '2026-07-12', tags: ['data'] },
-  { id: 't8', projectId: 'p3', title: 'Modelagem dimensional', status: 'todo', priority: 'media', assigneeId: 'u5', dueDate: '2026-07-20', tags: ['data', 'modelagem'] },
-  { id: 't9', projectId: 'p6', title: 'Medidas DAX de metas', status: 'review', priority: 'media', assigneeId: 'u5', dueDate: '2026-07-06', tags: ['bi'] },
-  { id: 't10', projectId: 'p6', title: 'Publicar dashboard', status: 'todo', priority: 'alta', assigneeId: 'u2', dueDate: '2026-07-18', tags: ['bi', 'deploy'] },
-  { id: 't11', projectId: 'p8', title: 'Cadastro de colaboradores', status: 'backlog', priority: 'media', assigneeId: 'u4', dueDate: '2026-08-01', tags: ['frontend'] },
-  { id: 't12', projectId: 'p1', title: 'Testes E2E do portal', status: 'todo', priority: 'media', assigneeId: 'u6', dueDate: '2026-07-22', tags: ['qa'] },
-  { id: 't13', projectId: 'p2', title: 'Correção crash Android 14', status: 'backlog', priority: 'critica', assigneeId: 'u6', dueDate: '2026-07-09', tags: ['mobile', 'bug'] },
-  { id: 't14', projectId: 'p3', title: 'RLS por unidade', status: 'backlog', priority: 'alta', assigneeId: 'u5', dueDate: '2026-08-05', tags: ['seguranca'] },
+  { id: 't1', entregableId: 'd1', title: 'Tela de login SSO', status: 'done', priority: 'alta', assigneeId: 'u4', dueDate: '2026-06-20', tags: ['frontend', 'auth'] },
+  { id: 't2', entregableId: 'd1', title: 'API de faturas', status: 'doing', priority: 'alta', assigneeId: 'u2', dueDate: '2026-07-10', tags: ['backend'] },
+  { id: 't3', entregableId: 'd1', title: 'Design system v2', status: 'review', priority: 'media', assigneeId: 'u3', dueDate: '2026-07-08', tags: ['design'] },
+  { id: 't4', entregableId: 'd2', title: 'Fluxo de checkout offline', status: 'doing', priority: 'critica', assigneeId: 'u4', dueDate: '2026-07-05', tags: ['mobile'] },
+  { id: 't5', entregableId: 'd2', title: 'Sincronização de estoque', status: 'todo', priority: 'alta', assigneeId: 'u2', dueDate: '2026-07-15', tags: ['backend', 'sync'] },
+  { id: 't6', entregableId: 'd2', title: 'Push notifications', status: 'backlog', priority: 'baixa', assigneeId: 'u4', dueDate: '2026-07-25', tags: ['mobile'] },
+  { id: 't7', entregableId: 'd3', title: 'Pipeline ingestão diária', status: 'doing', priority: 'alta', assigneeId: 'u2', dueDate: '2026-07-12', tags: ['data'] },
+  { id: 't8', entregableId: 'd3', title: 'Modelagem dimensional', status: 'todo', priority: 'media', assigneeId: 'u5', dueDate: '2026-07-20', tags: ['data', 'modelagem'] },
+  { id: 't9', entregableId: 'd5', title: 'Medidas DAX de metas', status: 'review', priority: 'media', assigneeId: 'u5', dueDate: '2026-07-06', tags: ['bi'] },
+  { id: 't10', entregableId: 'd5', title: 'Publicar dashboard', status: 'todo', priority: 'alta', assigneeId: 'u2', dueDate: '2026-07-18', tags: ['bi', 'deploy'] },
+  { id: 't11', entregableId: 'd6', title: 'Cadastro de colaboradores', status: 'backlog', priority: 'media', assigneeId: 'u4', dueDate: '2026-08-01', tags: ['frontend'] },
+  { id: 't12', entregableId: 'd1', title: 'Testes E2E do portal', status: 'todo', priority: 'media', assigneeId: 'u6', dueDate: '2026-07-22', tags: ['qa'] },
+  { id: 't13', entregableId: 'd2', title: 'Correção crash Android 14', status: 'backlog', priority: 'critica', assigneeId: 'u6', dueDate: '2026-07-09', tags: ['mobile', 'bug'] },
+  { id: 't14', entregableId: 'd3', title: 'RLS por unidade', status: 'backlog', priority: 'alta', assigneeId: 'u5', dueDate: '2026-08-05', tags: ['seguranca'] },
 ]
 
 export const deliverables: Deliverable[] = [

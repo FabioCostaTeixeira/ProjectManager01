@@ -37,7 +37,7 @@ export type Priority = 'baixa' | 'media' | 'alta' | 'critica'
 
 export interface Task {
   id: ID
-  projectId: ID
+  entregableId: ID
   title: string
   status: TaskStatus
   priority: Priority

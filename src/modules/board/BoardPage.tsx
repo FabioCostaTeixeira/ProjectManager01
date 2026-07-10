@@ -79,7 +79,6 @@ export function BoardPage() {
               <div className="flex flex-1 flex-col gap-2">
                 {items.map((t) => {
                   const u = userOf(t.assigneeId)
-                  const p = projectOf(t.projectId)
                   const pr = priorityBadge[t.priority]
                   return (
                     <div
@@ -94,7 +93,6 @@ export function BoardPage() {
                       )}
                     >
                       <p className="text-sm font-medium text-slate-900 dark:text-white">{t.title}</p>
-                      <p className="mt-0.5 text-xs text-slate-400">{p?.name}</p>
                       <div className="mt-2 flex flex-wrap gap-1">
                         {t.tags.map((tag) => (
                           <span key={tag} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
@@ -119,20 +117,10 @@ export function BoardPage() {
         open={selected !== null}
         onClose={() => setSelected(null)}
         title={selected?.title ?? ''}
-        footer={
-          selected && (
-            <Link
-              to={`/projetos/${selected.projectId}`}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-600"
-            >
-              Ver projeto <ExternalLink size={14} />
-            </Link>
-          )
-        }
+        footer={null}
       >
         {selected && (() => {
           const u = userOf(selected.assigneeId)
-          const p = projectOf(selected.projectId)
           const pr = priorityBadge[selected.priority]
           return (
             <div className="space-y-3 text-sm">
@@ -140,7 +128,6 @@ export function BoardPage() {
                 <Badge className="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">{taskStatusLabel[selected.status]}</Badge>
                 <Badge className={pr.className}>{pr.label}</Badge>
               </div>
-              <p className="text-slate-500 dark:text-slate-400">Projeto: <span className="font-medium text-slate-900 dark:text-white">{p?.name ?? '—'}</span></p>
               <p className="text-slate-500 dark:text-slate-400">Prazo: <span className="font-medium text-slate-900 dark:text-white">{dateBR(selected.dueDate)}</span></p>
               {u && (
                 <p className="flex items-center gap-2 text-slate-500 dark:text-slate-400">

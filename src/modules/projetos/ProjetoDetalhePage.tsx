@@ -1,15 +1,15 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Plus, Pencil, Trash2 } from 'lucide-react'
+import { ArrowLeft, Plus, Pencil, Trash2, ChevronDown } from 'lucide-react'
 import { api, createEntity, updateEntity, removeEntity } from '../../services/api'
-import { Card, PageHeader, StatTile, Badge, ProgressBar, Avatar, TableWrap, Th, Td, Loading, Modal } from '../../components/ui'
+import { Card, PageHeader, StatTile, Badge, ProgressBar, Avatar, TableWrap, Th, Td, Loading, Modal, cn } from '../../components/ui'
 import { projectStatusBadge, priorityBadge, taskStatusLabel, deliverableBadge, healthDot, brl, dateBR } from '../../lib/format'
 import type { Task, Deliverable, Priority, TaskStatus, DeliverableStatus } from '../../types'
 
-const emptyTask = (projectId: string): Task => ({
+const emptyTask = (entregableId: string): Task => ({
   id: `t-${Date.now()}`,
-  projectId,
+  entregableId,
   title: '',
   status: 'todo',
   priority: 'media',
@@ -46,10 +46,10 @@ export function ProjetoDetalhePage() {
 
   const st = projectStatusBadge[p.status]
   const owner = users.data?.find((u) => u.id === p.ownerId)
-  const pTasks = tasks.data?.filter((t) => t.projectId === p.id) ?? []
   const pDels = deliverables.data?.filter((d) => d.projectId === p.id) ?? []
   const pFin = finance.data?.filter((f) => f.projectId === p.id) ?? []
   const userOf = (uid: string) => users.data?.find((u) => u.id === uid)
+  const [expandedDels, setExpandedDels] = useState<Set<string>>(new Set())
 
   const saveTask = async () => {
     if (!editingTask?.title.trim()) return
@@ -101,65 +101,40 @@ export function ProjetoDetalhePage() {
         <ProgressBar value={p.progress} />
       </Card>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div>
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Tarefas ({pTasks.length})</h2>
-            <button
-              onClick={() => setEditingTask(emptyTask(p.id))}
-              className="inline-flex items-center gap-1 rounded-lg bg-indigo-500 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-600"
-            >
-              <Plus size={13} /> Nova
-            </button>
-          </div>
-          <TableWrap>
-            <thead><tr><Th>Tarefa</Th><Th>Status</Th><Th>Prioridade</Th><Th>Resp.</Th><Th>Ações</Th></tr></thead>
-            <tbody>
-              {pTasks.map((t) => {
-                const u = userOf(t.assigneeId)
-                return (
-                  <tr key={t.id}>
-                    <Td className="font-medium text-slate-900 dark:text-white">{t.title}</Td>
-                    <Td className="text-xs">{taskStatusLabel[t.status]}</Td>
-                    <Td><Badge className={priorityBadge[t.priority].className}>{priorityBadge[t.priority].label}</Badge></Td>
-                    <Td>{u && <Avatar name={u.name} color={u.color} size={24} />}</Td>
-                    <Td>
-                      <div className="flex gap-1">
-                        <button onClick={() => setEditingTask({ ...t })} title="Editar" className="rounded p-1 text-slate-400 hover:text-indigo-500">
-                          <Pencil size={13} />
-                        </button>
-                        <button onClick={() => removeTask(t.id)} title="Excluir" className="rounded p-1 text-slate-400 hover:text-rose-500">
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </Td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </TableWrap>
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Entregáveis ({pDels.length})</h2>
+          <button
+            onClick={() => setEditingDeliverable(emptyDeliverable(p.id))}
+            className="inline-flex items-center gap-1 rounded-lg bg-indigo-500 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-600"
+          >
+            <Plus size={13} /> Novo
+          </button>
         </div>
-
-        <div>
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Entregáveis ({pDels.length})</h2>
-            <button
-              onClick={() => setEditingDeliverable(emptyDeliverable(p.id))}
-              className="inline-flex items-center gap-1 rounded-lg bg-indigo-500 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-600"
-            >
-              <Plus size={13} /> Novo
-            </button>
-          </div>
-          <TableWrap>
-            <thead><tr><Th>Entregável</Th><Th>Status</Th><Th>Prazo</Th><Th>Ações</Th></tr></thead>
-            <tbody>
-              {pDels.map((d) => (
-                <tr key={d.id}>
-                  <Td className="font-medium text-slate-900 dark:text-white">{d.name}</Td>
-                  <Td><Badge className={deliverableBadge[d.status].className}>{deliverableBadge[d.status].label}</Badge></Td>
-                  <Td className="whitespace-nowrap text-xs text-slate-500">{dateBR(d.dueDate)}</Td>
-                  <Td>
-                    <div className="flex gap-1">
+        <div className="space-y-2">
+            {pDels.map((d) => {
+              const isExpanded = expandedDels.has(d.id)
+              const dTasks = tasks.data?.filter((t) => t.entregableId === d.id) ?? []
+              const dOwner = userOf(d.ownerId)
+              return (
+                <div key={d.id} className="rounded-lg border border-slate-200 dark:border-slate-700">
+                  <button
+                    onClick={() => {
+                      const newSet = new Set(expandedDels)
+                      if (isExpanded) newSet.delete(d.id)
+                      else newSet.add(d.id)
+                      setExpandedDels(newSet)
+                    }}
+                    className="w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                  >
+                    <ChevronDown size={16} className={cn('text-slate-400 transition-transform', isExpanded && 'rotate-180')} />
+                    <div className="flex-1 text-left">
+                      <p className="font-medium text-slate-900 dark:text-white">{d.name}</p>
+                      <p className="text-xs text-slate-500">Prazo: {dateBR(d.dueDate)}</p>
+                    </div>
+                    <Badge className={deliverableBadge[d.status].className}>{deliverableBadge[d.status].label}</Badge>
+                    {dOwner && <Avatar name={dOwner.name} color={dOwner.color} size={24} />}
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => setEditingDeliverable({ ...d })} title="Editar" className="rounded p-1 text-slate-400 hover:text-indigo-500">
                         <Pencil size={13} />
                       </button>
@@ -167,29 +142,72 @@ export function ProjetoDetalhePage() {
                         <Trash2 size={13} />
                       </button>
                     </div>
-                  </Td>
-                </tr>
-              ))}
-            </tbody>
-          </TableWrap>
-
-          {pFin.length > 0 && (
-            <>
-              <h2 className="mb-3 mt-6 text-sm font-semibold text-slate-900 dark:text-white">Financeiro</h2>
-              <TableWrap>
-                <thead><tr><Th>Descrição</Th><Th>Valor</Th></tr></thead>
-                <tbody>
-                  {pFin.map((f) => (
-                    <tr key={f.id}>
-                      <Td>{f.description}</Td>
-                      <Td className="font-medium">{brl(f.amount)}</Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </TableWrap>
-            </>
-          )}
+                  </button>
+                  {isExpanded && (
+                    <div className="border-t border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/30">
+                      <div className="mb-3 flex items-center justify-between">
+                        <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Tarefas ({dTasks.length})</p>
+                        <button
+                          onClick={() => setEditingTask(emptyTask(d.id))}
+                          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-500/10"
+                        >
+                          <Plus size={12} /> Nova
+                        </button>
+                      </div>
+                      {dTasks.length === 0 ? (
+                        <p className="text-xs text-slate-400">Sem tarefas</p>
+                      ) : (
+                        <TableWrap>
+                          <thead><tr><Th>Tarefa</Th><Th>Status</Th><Th>Prioridade</Th><Th>Resp.</Th><Th>Prazo</Th><Th>Ações</Th></tr></thead>
+                          <tbody>
+                            {dTasks.map((t) => {
+                              const u = userOf(t.assigneeId)
+                              return (
+                                <tr key={t.id}>
+                                  <Td className="font-medium text-slate-900 dark:text-white">{t.title}</Td>
+                                  <Td className="text-xs">{taskStatusLabel[t.status]}</Td>
+                                  <Td><Badge className={priorityBadge[t.priority].className}>{priorityBadge[t.priority].label}</Badge></Td>
+                                  <Td>{u && <Avatar name={u.name} color={u.color} size={20} />}</Td>
+                                  <Td className="text-xs text-slate-500">{dateBR(t.dueDate)}</Td>
+                                  <Td>
+                                    <div className="flex gap-1">
+                                      <button onClick={() => setEditingTask({ ...t })} title="Editar" className="rounded p-1 text-slate-400 hover:text-indigo-500">
+                                        <Pencil size={13} />
+                                      </button>
+                                      <button onClick={() => removeTask(t.id)} title="Excluir" className="rounded p-1 text-slate-400 hover:text-rose-500">
+                                        <Trash2 size={13} />
+                                      </button>
+                                    </div>
+                                  </Td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </TableWrap>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
         </div>
+
+        {pFin.length > 0 && (
+          <>
+            <h2 className="mb-3 mt-6 text-sm font-semibold text-slate-900 dark:text-white">Financeiro</h2>
+            <TableWrap>
+              <thead><tr><Th>Descrição</Th><Th>Valor</Th></tr></thead>
+              <tbody>
+                {pFin.map((f) => (
+                  <tr key={f.id}>
+                    <Td>{f.description}</Td>
+                    <Td className="font-medium">{brl(f.amount)}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </TableWrap>
+          </>
+        )}
       </div>
 
       <Modal
