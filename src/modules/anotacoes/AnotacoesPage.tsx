@@ -20,6 +20,8 @@ export function AnotacoesPage() {
   const [overCol, setOverCol] = useState<string | null>(null)
   const [addingCol, setAddingCol] = useState(false)
   const [newColTitle, setNewColTitle] = useState('')
+  const [addingCardCol, setAddingCardCol] = useState<string | null>(null)
+  const [newCardTitle, setNewCardTitle] = useState('')
 
   if (isLoading) return <Loading />
 
@@ -29,6 +31,14 @@ export function AnotacoesPage() {
     await queryClient.invalidateQueries({ queryKey: ['noteColumns'] })
     setNewColTitle('')
     setAddingCol(false)
+  }
+
+  const addCard = async (columnId: string) => {
+    if (!newCardTitle.trim()) return
+    await createEntity('note-cards', { id: `ncd-${Date.now()}`, columnId, title: newCardTitle.trim(), checklist: [], tags: [] })
+    await queryClient.invalidateQueries({ queryKey: ['noteCards'] })
+    setNewCardTitle('')
+    setAddingCardCol(null)
   }
 
   return (
@@ -90,6 +100,35 @@ export function AnotacoesPage() {
                   </div>
                 ))}
               </div>
+
+              {addingCardCol === col.id ? (
+                <div className="mt-2 flex items-center gap-1.5">
+                  <input
+                    autoFocus
+                    value={newCardTitle}
+                    onChange={(e) => setNewCardTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); addCard(col.id) }
+                      if (e.key === 'Escape') { setAddingCardCol(null); setNewCardTitle('') }
+                    }}
+                    placeholder="Título do cartão…"
+                    className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900"
+                  />
+                  <button onClick={() => addCard(col.id)} className="rounded-lg bg-indigo-500 p-1.5 text-white hover:bg-indigo-600">
+                    <Plus size={15} />
+                  </button>
+                  <button onClick={() => { setAddingCardCol(null); setNewCardTitle('') }} className="rounded-lg p-1.5 text-slate-400 hover:text-rose-500">
+                    <X size={15} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setAddingCardCol(col.id)}
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-1 py-1 text-xs font-medium text-slate-400 hover:text-indigo-500"
+                >
+                  <Plus size={13} /> Card
+                </button>
+              )}
             </div>
           )
         })}

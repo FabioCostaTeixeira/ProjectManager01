@@ -8,10 +8,16 @@
 }
 
 /* O popup nativo de <select> não herda o tema escuro do app de forma
-   confiável entre navegadores; forçar light-scheme garante texto escuro
-   sobre fundo claro (legível) nas opções, independente do modo do app. */
+   confiável entre navegadores; forçar light-scheme garante fundo claro
+   nas opções. Mas a cor do texto do <select> é herdada normalmente
+   (ex.: dark:text-white do layout) e vários navegadores aplicam essa
+   MESMA cor herdada dentro do popup — resultado: texto branco sobre
+   fundo branco no tema escuro. Força cor escura sempre, com !important
+   pra vencer qualquer dark:text-* herdado, já que o requisito é "sempre
+   legível", não "acompanha o tema". */
 select {
   color-scheme: light;
+  color: #0f172a !important;
 }
 
 html,
